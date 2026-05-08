@@ -44,6 +44,7 @@
 		A6886CEE2FA21F9400809E35 /* Nodes */ = {
 			isa = PBXGroup;
 			children = (
+				A6886CF62FA2207B00809E35 /* PlayerNode.swift */,
 			);
 			path = Nodes;
 			sourceTree = "<group>";
@@ -75,7 +76,6 @@
 		BCD0F3262F995AC70067AA84 = {
 			isa = PBXGroup;
 			children = (
-				A6886CF62FA2207B00809E35 /* PlayerNode.swift */,
 				A6886CF42FA2203E00809E35 /* GameState.swift */,
 				BCD0F3312F995AC70067AA84 /* GeoShot */,
 				BCD0F3302F995AC70067AA84 /* Products */,

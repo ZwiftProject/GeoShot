@@ -3,16 +3,21 @@
 //  GeoShot
 //
 
-import Foundation
+import SpriteKit
 
 class PlayerNode: SKShapeNode {
     
-    let speed: CGFloat = 200
+    let mooveSpeed: CGFloat = 200
     var gameState: GameState
     
     init (gameState: GameState) {
         self.gameState = gameState
         super.init()
+        setupShape()
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) not implemented")
     }
     
     private func setupShape() {

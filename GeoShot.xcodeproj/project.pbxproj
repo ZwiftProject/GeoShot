@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A6886CF52FA2203E00809E35 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF42FA2203E00809E35 /* GameState.swift */; };
 		A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF62FA2207B00809E35 /* PlayerNode.swift */; };
+		A6CDC2562FADDADF0089F83D /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF32FA21FF500809E35 /* GameScene.swift */; };
 		BCD0F3332F995AC70067AA84 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD0F3322F995AC70067AA84 /* AppDelegate.swift */; };
 		BCD0F3352F995AC70067AA84 /* GameScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = BCD0F3342F995AC70067AA84 /* GameScene.sks */; };
 		BCD0F33B2F995AC70067AA84 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD0F33A2F995AC70067AA84 /* GameViewController.swift */; };
@@ -76,7 +77,6 @@
 		BCD0F3262F995AC70067AA84 = {
 			isa = PBXGroup;
 			children = (
-				A6886CF42FA2203E00809E35 /* GameState.swift */,
 				BCD0F3312F995AC70067AA84 /* GeoShot */,
 				BCD0F3302F995AC70067AA84 /* Products */,
 			);
@@ -93,6 +93,7 @@
 		BCD0F3312F995AC70067AA84 /* GeoShot */ = {
 			isa = PBXGroup;
 			children = (
+				A6886CF42FA2203E00809E35 /* GameState.swift */,
 				A6886CF22FA21FD600809E35 /* Support */,
 				A6886CF12FA21FCF00809E35 /* Models */,
 				A6886CF02FA21FC500809E35 /* Scenes */,
@@ -177,6 +178,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A6CDC2562FADDADF0089F83D /* GameScene.swift in Sources */,
 				A6886CF52FA2203E00809E35 /* GameState.swift in Sources */,
 				BCD0F33B2F995AC70067AA84 /* GameViewController.swift in Sources */,
 				BCD0F3332F995AC70067AA84 /* AppDelegate.swift in Sources */,

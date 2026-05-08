@@ -7,7 +7,7 @@ import SpriteKit
 
 class PlayerNode: SKShapeNode {
     
-    let mooveSpeed: CGFloat = 200
+    let moveSpeed: CGFloat = 200
     var gameState: GameState
     
     init (gameState: GameState) {
@@ -36,8 +36,8 @@ class PlayerNode: SKShapeNode {
     
     func move(direction: CGVector, deltaTime: TimeInterval) {
         guard gameState.isAlive else { return }
-        let dx = direction.dx * speed * CGFloat(deltaTime)
-        let dy = direction.dy * speed * CGFloat(deltaTime)
+        let dx = direction.dx * moveSpeed * CGFloat(deltaTime)
+        let dy = direction.dy * moveSpeed * CGFloat(deltaTime)
         position = CGPoint(x: position.x + dx, y: position.y + dy)
     }
 }

@@ -30,13 +30,13 @@ class PlayerNode: SKShapeNode {
     }
     
     private func setupShape() {
-        // Desenha a Kite: um losango (diamante) em cyan (azul claro) com borda branca
-        // Vértices: topo (0, 20), direita (15, 0), fundo (0, -20), esquerda (-15, 0)
+        // Desenha um losango assimétrico (seta) em cyan com borda branca
+        // Vértices: topo (0, 20), ponta direita ampliada (30, 0), fundo (0, -20), esquerda curta (-12, 0)
         let path = CGMutablePath()
-        path.move(to: CGPoint(x: 0, y: 20))         // topo
-        path.addLine(to: CGPoint(x: 15, y: 0))      // direita
-        path.addLine(to: CGPoint(x: 0, y: -20))     // fundo
-        path.addLine(to: CGPoint(x: -15, y: 0))     // esquerda
+        path.move(to: CGPoint(x: 0, y: 13))         // topo
+        path.addLine(to: CGPoint(x: 30, y: 0))      // ponta direita (mais longa, dá aspecto de seta)
+        path.addLine(to: CGPoint(x: 0, y: -13))     // fundo
+        path.addLine(to: CGPoint(x: -12, y: 0))     // esquerda (um pouco mais curta)
         path.closeSubpath()
         
         self.path = path

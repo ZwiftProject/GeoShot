@@ -57,6 +57,12 @@ class GameScene: SKScene {
         player.position = CGPoint(x: size.width / 2, y: size.height / 2)  // Centro do ecrã
         addChild(player)
     }
+
+    func spawnSquared() {
+        squared = SquaredNode()
+        squared.position = CGPoint(x: size.width * 0.25, y: size.height * 0.65)
+        addChild(squared)
+    }
     
     /// Determina se um ponto está na zona do joystick (esquerda)
     func isInJoystickArea(_ p: CGPoint) -> Bool { p.x < size.width * 0.4 }

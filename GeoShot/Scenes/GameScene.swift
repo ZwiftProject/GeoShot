@@ -15,11 +15,14 @@ class GameScene: SKScene {
     var player: PlayerNode!
     var joystick: JoystickNode!
     var enemies: [TriangleNode] = []      // Array com todos os inimigos vivos
+    var bullets: [BulletNode] = []        // Array com todas as balas em voo
     
     var joystickTouch: UITouch?
     var fireTouch: UITouch?
     
     private var lastUpdateTime: TimeInterval = 0
+    private var lastFireTime: TimeInterval = 0
+    private let fireRate: TimeInterval = 0.5  // Uma bala a cada 0.5 segundos
     
     // Visualização de auto-aim: círculo verde ao redor do inimigo alvo
     var targetIndicator: SKShapeNode?
@@ -158,6 +161,39 @@ class GameScene: SKScene {
             // Se houver input de movimento, roda na direção do joystick
             if joystick.direction != .zero {
                 player.zRotation = atan2(joystick.direction.dy, joystick.direction.dx)
+            }
+        }
+        
+        // 3. SISTEMA DE DISPARO
+        if isFiring && currentTime - lastFireTime >= fireRate {
+            let bullet = BulletNode(position: player.position, direction: player.fireDirection)
+            addChild(bullet)
+            bullets.append(bullet)
+            lastFireTime = currentTime
+        }
+        
+        // 4. MOVIMENTO E LIMPEZA DE BALAS
+        for bullet in bullets {
+            bullet.update(deltaTime: deltaTime)
+        }
+        // Remover balas fora do ecrã
+        bullets.removeAll { $0.isOffScreen(sceneSize: size) }
+        // Remover balas que foram removidas da cena
+        bullets.removeAll { !children.contains($0) }
+        
+        // 5. DETEÇÃO DE COLISÕES
+        for (bulletIndex, bullet) in bullets.enumerated().reversed() {
+            for (enemyIndex, enemy) in enemies.enumerated().reversed() {
+                let distance = hypot(bullet.position.x - enemy.position.x, bullet.position.y - enemy.position.y)
+                if distance < 20 {  // Raio de colisão aproximado
+                    // Remover inimigo e bala
+                    enemy.removeFromParent()
+                    enemies.remove(at: enemyIndex)
+                    bullet.removeFromParent()
+                    bullets.remove(at: bulletIndex)
+                    gameState.score += 10  // Adicionar pontuação
+                    break  // Sair do loop de inimigos, esta bala foi removida
+                }
             }
         }
     }

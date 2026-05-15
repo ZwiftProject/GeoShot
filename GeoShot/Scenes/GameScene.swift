@@ -9,6 +9,7 @@ import SpriteKit
 class GameScene: SKScene {
     var gameState = GameState()
     var player: PlayerNode!
+    var squared: SquaredNode!
     var joystick: JoystickNode!
     
     var joystickTouch: UITouch?
@@ -20,6 +21,7 @@ class GameScene: SKScene {
         backgroundColor = SKColor(white: 0.05, alpha: 1)
         setupJoystick()
         spawnPlayer()
+        spawnSquared()
     }
     
     func setupJoystick() {
@@ -32,6 +34,12 @@ class GameScene: SKScene {
         player = PlayerNode(gameState: gameState)
         player.position = CGPoint(x: size.width / 2, y: size.height / 2)
         addChild(player)
+    }
+
+    func spawnSquared() {
+        squared = SquaredNode()
+        squared.position = CGPoint(x: size.width * 0.25, y: size.height * 0.65)
+        addChild(squared)
     }
     
     func isInJoystickArea(_ p: CGPoint) -> Bool { p.x < size.width * 0.4 }
@@ -75,5 +83,7 @@ class GameScene: SKScene {
         lastUpdateTime = currentTime
 
         player.move(direction: joystick.direction, deltaTime: deltaTime)
+
+        squared.move(towards: player.position, deltaTime: deltaTime)
     }
 }

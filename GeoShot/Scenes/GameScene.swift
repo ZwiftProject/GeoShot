@@ -13,6 +13,7 @@ import SpriteKit
 class GameScene: SKScene {
     var gameState = GameState()
     var player: PlayerNode!
+    var squared: SquaredNode!
     var joystick: JoystickNode!
     var enemies: [TriangleNode] = []      // Array com todos os inimigos vivos
     
@@ -29,6 +30,7 @@ class GameScene: SKScene {
         backgroundColor = SKColor(white: 0.05, alpha: 1)  // Fundo muito escuro (quase preto)
         setupJoystick()      // Criar joystick virtual (esquerda)
         spawnPlayer()        // Criar a Kite no centro
+        spawnSquared()       // Inimigo Squared (persegue o jogador)
         spawnEnemies()       // Criar inimigos para teste do auto-aim
     }
     
@@ -125,6 +127,11 @@ class GameScene: SKScene {
         // 1. MOVIMENTO DO JOGADOR
         // Usa a direção do joystick para mover a Kite
         player.move(direction: joystick.direction, deltaTime: deltaTime)
+
+        // Squared persegue o jogador (inimigo base — lento, mais vida)
+        if let squared = squared, squared.parent != nil {
+            squared.move(towards: player.position, deltaTime: deltaTime)
+        }
         
         // 2. AUTO-AIM: ENCONTRAR O INIMIGO MAIS PRÓXIMO
         let closestEnemy = findClosestEnemy(to: player)

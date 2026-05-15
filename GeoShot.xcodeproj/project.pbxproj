@@ -12,8 +12,8 @@
 		A6886CF92FA2209B00809E35 /* TriangleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF82FA2208B00809E35 /* TriangleNode.swift */; };
 		A6CDC2562FADDADF0089F83D /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF32FA21FF500809E35 /* GameScene.swift */; };
 		A6CDC2582FADDBAE0089F83D /* JoystickNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6CDC2572FADDBAE0089F83D /* JoystickNode.swift */; };
-		A6E1A0012FB0000100809E35 /* TriangleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E1A0022FB0000100809E35 /* TriangleNode.swift */; };
 		A6E1A0032FB0000100809E35 /* SquaredNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E1A0042FB0000100809E35 /* SquaredNode.swift */; };
+		BCB6C4C82FB71E0000E715B3 /* BulletNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */; };
 		BCD0F3332F995AC70067AA84 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD0F3322F995AC70067AA84 /* AppDelegate.swift */; };
 		BCD0F3352F995AC70067AA84 /* GameScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = BCD0F3342F995AC70067AA84 /* GameScene.sks */; };
 		BCD0F33B2F995AC70067AA84 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD0F33A2F995AC70067AA84 /* GameViewController.swift */; };
@@ -28,8 +28,8 @@
 		A6886CF62FA2207B00809E35 /* PlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerNode.swift; sourceTree = "<group>"; };
 		A6886CF82FA2208B00809E35 /* TriangleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriangleNode.swift; sourceTree = "<group>"; };
 		A6CDC2572FADDBAE0089F83D /* JoystickNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoystickNode.swift; sourceTree = "<group>"; };
-		A6E1A0022FB0000100809E35 /* TriangleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriangleNode.swift; sourceTree = "<group>"; };
 		A6E1A0042FB0000100809E35 /* SquaredNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquaredNode.swift; sourceTree = "<group>"; };
+		BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulletNode.swift; sourceTree = "<group>"; };
 		BCD0F32F2F995AC70067AA84 /* GeoShot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeoShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCD0F3322F995AC70067AA84 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BCD0F3342F995AC70067AA84 /* GameScene.sks */ = {isa = PBXFileReference; lastKnownFileType = file.sks; path = GameScene.sks; sourceTree = "<group>"; };
@@ -56,8 +56,8 @@
 				A6886CF62FA2207B00809E35 /* PlayerNode.swift */,
 				A6886CF82FA2208B00809E35 /* TriangleNode.swift */,
 				A6CDC2572FADDBAE0089F83D /* JoystickNode.swift */,
-				A6E1A0022FB0000100809E35 /* TriangleNode.swift */,
 				A6E1A0042FB0000100809E35 /* SquaredNode.swift */,
+				BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */,
 			);
 			path = Nodes;
 			sourceTree = "<group>";
@@ -198,7 +198,6 @@
 				A6886CF92FA2209B00809E35 /* TriangleNode.swift in Sources */,
 				BCD0F3332F995AC70067AA84 /* AppDelegate.swift in Sources */,
 				A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */,
-				A6E1A0012FB0000100809E35 /* TriangleNode.swift in Sources */,
 				A6E1A0032FB0000100809E35 /* SquaredNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

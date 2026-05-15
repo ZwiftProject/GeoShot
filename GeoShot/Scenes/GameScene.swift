@@ -111,6 +111,10 @@ class GameScene: SKScene {
         let deltaTime = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
         lastUpdateTime = currentTime
 
+        let movementAngle: CGFloat? = joystick.direction != .zero
+            ? atan2(joystick.direction.dy, joystick.direction.dx)
+            : nil
+
         player.move(direction: joystick.direction, deltaTime: deltaTime)
 
         if let squared = squared, squared.parent != nil {
@@ -125,7 +129,13 @@ class GameScene: SKScene {
             let angle = atan2(dy, dx)
 
             player.fireDirection = CGVector(dx: cos(angle), dy: sin(angle))
-            player.zRotation = angle
+
+            if isFiring {
+                player.zRotation = angle
+            } else if let movementAngle = movementAngle {
+                player.zRotation = movementAngle
+            }
+
             updateTargetIndicator(at: target.position)
         } else {
             if targetIndicator != nil {
@@ -133,8 +143,8 @@ class GameScene: SKScene {
                 targetIndicator = nil
             }
 
-            if joystick.direction != .zero {
-                player.zRotation = atan2(joystick.direction.dy, joystick.direction.dx)
+            if let movementAngle = movementAngle {
+                player.zRotation = movementAngle
             }
         }
 

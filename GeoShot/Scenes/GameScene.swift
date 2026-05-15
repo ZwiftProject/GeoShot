@@ -22,7 +22,6 @@ import SpriteKit
 class GameScene: SKScene {
     var gameState = GameState()
     var player: PlayerNode!
-    var squared: SquaredNode!
     var joystick: JoystickNode!
     var enemies: [TriangleNode] = []      // Array com todos os inimigos vivos
     var bullets: [BulletNode] = []        // Array com todas as balas em voo
@@ -42,7 +41,6 @@ class GameScene: SKScene {
         backgroundColor = SKColor(white: 0.05, alpha: 1)  // Fundo muito escuro (quase preto)
         setupJoystick()      // Criar joystick virtual (esquerda)
         spawnPlayer()        // Criar a Kite no centro
-        spawnSquared()       // Criar o nó Squared (presente no branch main)
         spawnEnemies()       // Criar inimigos para testar o auto-aim
     }
     
@@ -58,11 +56,7 @@ class GameScene: SKScene {
         addChild(player)
     }
 
-    func spawnSquared() {
-        squared = SquaredNode()
-        squared.position = CGPoint(x: size.width * 0.25, y: size.height * 0.65)
-        addChild(squared)
-    }
+
 
     /// Cria 5 inimigos Triangle em posições aleatórias para simular o combate
     func spawnEnemies() {
@@ -140,8 +134,7 @@ class GameScene: SKScene {
         // Usa a direção do joystick para mover a Kite
         player.move(direction: joystick.direction, deltaTime: deltaTime)
 
-        // Atualizar o nó Squared (comportamento simples de seguir o jogador)
-        squared.move(towards: player.position, deltaTime: deltaTime)
+        // (no extra helper nodes to update)
 
         // 2. ROTAÇÃO COM PRIORIDADE
         // - Se estiver a disparar: aponta para o inimigo (mesmo se estiver a mover)
@@ -262,15 +255,4 @@ class GameScene: SKScene {
         targetIndicator?.position = position
     }
 }
-            targetIndicator?.strokeColor = .green         // Cor: verde
-            targetIndicator?.lineWidth = 2                // Espessura da linha
-            targetIndicator?.fillColor = .clear           // Sem preenchimento (apenas contorno)
-            targetIndicator?.zPosition = 1                // Mostrar por cima dos inimigos
-            addChild(targetIndicator!)
-        }
-        
-        // Atualizar posição (muito mais eficiente que remover e recriar)
-        targetIndicator?.position = position
->>>>>>> testing
-    }
-}
+

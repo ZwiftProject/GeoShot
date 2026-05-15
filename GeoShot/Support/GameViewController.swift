@@ -9,24 +9,24 @@ import UIKit
 import SpriteKit
 
 class GameViewController: UIViewController {
+    private var scenePresented = false
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        if let view = self.view as? SKView {
-            let scene = GameScene(size: view.bounds.size)
-            
-                
-            scene.scaleMode = .resizeFill
-            
-            // Present the scene
-            view.presentScene(scene)
-            
-            view.ignoresSiblingOrder = true
-            
-            view.showsFPS = true
-            view.showsNodeCount = true
-        }
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        // Present scene once when the view has its final size
+        guard !scenePresented, let skView = self.view as? SKView else { return }
+
+        let scene = GameScene(size: skView.bounds.size)
+        scene.scaleMode = .resizeFill
+        scene.anchorPoint = CGPoint(x: 0, y: 0)
+
+        skView.presentScene(scene)
+        skView.ignoresSiblingOrder = true
+        skView.showsFPS = true
+        skView.showsNodeCount = true
+
+        scenePresented = true
     }
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {

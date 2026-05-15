@@ -119,34 +119,45 @@ class GameScene: SKScene {
         // 1. MOVIMENTO DO JOGADOR
         // Usa a direção do joystick para mover a Kite
         player.move(direction: joystick.direction, deltaTime: deltaTime)
-        
-        // 2. AUTO-AIM: ENCONTRAR O INIMIGO MAIS PRÓXIMO
-        let closestEnemy = findClosestEnemy(to: player)
-        
-        // 3. APONTAR E PREPARAR DISPARO
-        if let target = closestEnemy {
-            // Calcular diferença de posição entre o alvo e o jogador
-            let dx = target.position.x - player.position.x
-            let dy = target.position.y - player.position.y
-            
-            // Calcular ângulo usando atan2 (radianos)
-            // atan2(y, x) retorna o ângulo em radianos (-π a π)
-            let angle = atan2(dy, dx)
-            
-            // Converter ângulo em vetor normalizado (cos, sin)
-            // Este vetor será usado para disparar balas na próxima semana
-            player.fireDirection = CGVector(dx: cos(angle), dy: sin(angle))
-            
-            // Rodar a Kite para visualmente apontar para o alvo
-            player.zRotation = angle
-            
-            // Atualizar indicador visual (círculo verde ao redor do alvo)
-            updateTargetIndicator(at: target.position)
+
+        // 2. ROTAÇÃO COM PRIORIDADE
+        // - Se estiver a disparar: aponta para o inimigo (mesmo se estiver a mover)
+        // - Se não estiver a disparar e estiver a mover: aponta na direção do movimento
+        let isFiring = fireTouch != nil
+
+        if isFiring {
+            let closestEnemy = findClosestEnemy(to: player)
+
+            if let target = closestEnemy {
+                // Calcular diferença de posição entre o alvo e o jogador
+                let dx = target.position.x - player.position.x
+                let dy = target.position.y - player.position.y
+
+                // Calcular ângulo usando atan2 (radianos)
+                let angle = atan2(dy, dx)
+
+                // Guardar direção de disparo para o sistema de tiros
+                player.fireDirection = CGVector(dx: cos(angle), dy: sin(angle))
+
+                // Rodar jogador para o alvo
+                player.zRotation = angle
+
+                // Mostrar indicador no alvo enquanto dispara
+                updateTargetIndicator(at: target.position)
+            } else if targetIndicator != nil {
+                targetIndicator?.removeFromParent()
+                targetIndicator = nil
+            }
         } else {
-            // Sem inimigos visíveis: remover indicador
+            // Não está a disparar: remover indicador de auto-aim
             if targetIndicator != nil {
                 targetIndicator?.removeFromParent()
                 targetIndicator = nil
+            }
+
+            // Se houver input de movimento, roda na direção do joystick
+            if joystick.direction != .zero {
+                player.zRotation = atan2(joystick.direction.dy, joystick.direction.dx)
             }
         }
     }

@@ -4,7 +4,7 @@
 //
 // CENA PRINCIPAL DO JOGO
 // - Gerir o jogador, inimigos, joystick
-// - Implementar auto-aim: apontar para inimigo mais próximo
+// - Auto-aim: apontar para o inimigo mais próximo (triângulos + quadrado)
 // - Detetar colisões e controlar lógica do combate
 //
 
@@ -121,9 +121,13 @@ class GameScene: SKScene {
             squared.move(towards: player.position, deltaTime: deltaTime)
         }
 
-        let closestEnemy = findClosestEnemy(to: player)
+        for enemy in enemies where enemy.parent != nil {
+            enemy.move(towards: player.position, deltaTime: deltaTime)
+        }
 
-        if let target = closestEnemy {
+        let closestTarget = findClosestTarget(to: player)
+
+        if let target = closestTarget {
             let dx = target.position.x - player.position.x
             let dy = target.position.y - player.position.y
             let angle = atan2(dy, dx)
@@ -171,6 +175,23 @@ class GameScene: SKScene {
         for (bulletIndex, bullet) in bullets.enumerated() {
             guard !bulletIndicesToRemove.contains(bulletIndex) else { continue }
 
+            if let sq = squared, sq.parent != nil, sq.hp > 0 {
+                let dSq = hypot(
+                    bullet.position.x - sq.position.x,
+                    bullet.position.y - sq.position.y
+                )
+                // Raio ~ metade da diagonal do quadrado (lado 34)
+                if dSq < 24 {
+                    sq.takeDamage(1)
+                    bullet.removeFromParent()
+                    bulletIndicesToRemove.insert(bulletIndex)
+                    if sq.parent == nil {
+                        gameState.score += 10
+                    }
+                    continue
+                }
+            }
+
             for (enemyIndex, enemy) in enemies.enumerated() {
                 guard !enemyIndicesToRemove.contains(enemyIndex) else { continue }
 
@@ -197,22 +218,29 @@ class GameScene: SKScene {
         }
     }
 
-    func findClosestEnemy(to player: PlayerNode) -> TriangleNode? {
-        var closestEnemy: TriangleNode?
-        var closestDistance = CGFloat.infinity
+    /// Inimigo mais próximo: triângulos vivos e o quadrado (se ainda tiver HP).
+    func findClosestTarget(to player: PlayerNode) -> SKNode? {
+        var closest: SKNode?
+        var closestDistance = CGFloat.greatestFiniteMagnitude
 
-        for enemy in enemies {
+        if let sq = squared, sq.parent != nil, sq.hp > 0 {
+            let dx = sq.position.x - player.position.x
+            let dy = sq.position.y - player.position.y
+            closestDistance = hypot(dx, dy)
+            closest = sq
+        }
+
+        for enemy in enemies where enemy.parent != nil {
             let dx = enemy.position.x - player.position.x
             let dy = enemy.position.y - player.position.y
-            let distance = sqrt(dx * dx + dy * dy)
-
+            let distance = hypot(dx, dy)
             if distance < closestDistance {
                 closestDistance = distance
-                closestEnemy = enemy
+                closest = enemy
             }
         }
 
-        return closestEnemy
+        return closest
     }
 
     func updateTargetIndicator(at position: CGPoint) {

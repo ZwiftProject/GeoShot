@@ -7,7 +7,7 @@ import SpriteKit
 
 class SquaredNode: SKShapeNode {
 
-    let moveSpeed: CGFloat = 110
+    let moveSpeed: CGFloat = 100
     let maxHp: Int = 3
     private(set) var hp: Int
 

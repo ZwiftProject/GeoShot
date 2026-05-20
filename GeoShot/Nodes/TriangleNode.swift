@@ -4,7 +4,7 @@
 //
 // INIMIGO TIPO TRIANGLE (Triângulo)
 // - Forma geométrica laranja que o jogador dispara
-// - Persegue a Kite (mais tarde)
+// - Persegue a Kite diretamente
 // - Tem 1 ponto de vida (morre com 1 bala)
 // - Dá 10 pontos ao morrer
 //
@@ -13,9 +13,9 @@ import SpriteKit
 
 class TriangleNode: SKShapeNode {
     
-    let moveSpeed: CGFloat = 150  // pixels/segundo (para movimento futuro)
-    var health: Int = 1            // Pontos de vida (1 = morre com 1 bala)
-    var gameState: GameState       // Referência ao estado do jogo (para somar pontuação)
+    let moveSpeed: CGFloat = 10
+    var health: Int = 1           
+    var gameState: GameState       
     
     init(gameState: GameState) {
         self.gameState = gameState
@@ -43,6 +43,25 @@ class TriangleNode: SKShapeNode {
         self.name = "enemy"                   // Identificador para debugging
     }
     
+    func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
+        guard health > 0, deltaTime > 0 else { return }
+
+        let dx = targetPosition.x - position.x
+        let dy = targetPosition.y - position.y
+        let distance = sqrt(dx * dx + dy * dy)
+
+        guard distance > 0 else { return }
+
+        let directionX = dx / distance
+        let directionY = dy / distance
+        let distanceToMove = moveSpeed * CGFloat(deltaTime)
+
+        position = CGPoint(
+            x: position.x + directionX * distanceToMove,
+            y: position.y + directionY * distanceToMove
+        )
+    }
+
     /// Função chamada quando uma bala bate no inimigo
     /// - Parameter amount: Dano a receber (normalmente 1)
     func takeDamage(_ amount: Int) {

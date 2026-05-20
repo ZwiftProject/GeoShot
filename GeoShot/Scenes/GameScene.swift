@@ -2,9 +2,8 @@
 //  GameScene.swift
 //  GeoShot
 //
-// CENA PRINCIPAL DO JOGO
-// - Mapa da dungeon: Andar 1 (3 combates + Plus), Andar 2 (3 combates + Pentagon)
-// - Auto-aim, colisões, progressão de sala
+// Mapa contínuo: salas + corredores; entrada das salas de combate fecha com a borda.
+// Boss só após limpar todas as salas de inimigos do andar.
 //
 
 import SpriteKit
@@ -14,39 +13,74 @@ class GameScene: SKScene {
     var player: PlayerNode!
     var joystick: JoystickNode!
 
-    /// Inimigos da sala atual (triângulos).
     var enemies: [TriangleNode] = []
-    /// Opcional em salas de combate do andar 2.
     var squared: SquaredNode?
     var plusMiniboss: PlusNode?
     var pentagonBoss: PentagonNode?
-
     var bullets: [BulletNode] = []
 
     var joystickTouch: UITouch?
     var fireTouch: UITouch?
+    var targetIndicator: SKShapeNode?
 
     private var lastUpdateTime: TimeInterval = 0
     private var lastFireTime: TimeInterval = 0
     private let fireRate: TimeInterval = 0.5
-
-    var targetIndicator: SKShapeNode?
-
     private var isFiring: Bool { fireTouch != nil }
 
-    private let roomSteps = DungeonMap.runSequence
-    private var currentStepIndex = 0
-    private var isAdvancingRoom = false
+    private var worldNode: SKNode!
+    private var mapRoot: SKNode!
+    private var gameCamera: SKCameraNode!
+    private var hudNode: SKNode!
+    private var viewportSize: CGSize = .zero
+    private var currentWorldBounds: CGRect = .zero
+    private let cameraFollowSmoothing: CGFloat = 14
+
+    private var currentFloor = 1
+    private var zonesById: [String: DungeonZone] = [:]
+    private var passages: [DungeonPassage] = []
+    private var doorNodes: [String: DungeonDoorNode] = [:]
+
+    private var currentZoneId: String = "start"
+    private var clearedCombatZoneIds: Set<String> = []
+    private var activeCombatZoneId: String?
+    private var bossSpawnedThisFloor = false
     private var runCompleted = false
 
     private var roomProgressLabel: SKLabelNode?
+    private var minimap: DungeonMinimapNode?
 
     override func didMove(to view: SKView) {
-        backgroundColor = SKColor(white: 0.05, alpha: 1)
+        backgroundColor = DungeonMapPalette.worldBackground
+        viewportSize = size
+        setupCameraAndWorld()
         setupRoomProgressLabel()
+        setupMinimap()
         setupJoystick()
         spawnPlayer()
-        loadCurrentRoom()
+        buildFloor(1)
+        snapCameraToPlayer()
+    }
+
+    // MARK: - Setup
+
+    private func setupCameraAndWorld() {
+        worldNode = SKNode()
+        worldNode.name = "world"
+        addChild(worldNode)
+
+        mapRoot = SKNode()
+        mapRoot.name = "mapRoot"
+        worldNode.addChild(mapRoot)
+
+        gameCamera = SKCameraNode()
+        gameCamera.name = "gameCamera"
+        addChild(gameCamera)
+        camera = gameCamera
+
+        hudNode = SKNode()
+        hudNode.name = "hud"
+        gameCamera.addChild(hudNode)
     }
 
     private func setupRoomProgressLabel() {
@@ -55,121 +89,540 @@ class GameScene: SKScene {
         label.alpha = 0.85
         label.horizontalAlignmentMode = .left
         label.verticalAlignmentMode = .top
-        label.position = CGPoint(x: 16, y: size.height - 12)
+        label.position = CGPoint(x: -viewportSize.width / 2 + 16, y: viewportSize.height / 2 - 12)
         label.zPosition = 20
         label.fontColor = .white
-        addChild(label)
+        hudNode.addChild(label)
         roomProgressLabel = label
     }
 
-    private func updateRoomProgressLabel(for step: DungeonRoomStep) {
-        let suffix: String
-        switch step.kind {
-        case .combat:
-            suffix = "Combate"
-        case .minibossPlus:
-            suffix = "Miniboss +"
-        case .bossPentagon:
-            suffix = "Boss"
-        }
-        roomProgressLabel?.text = "Andar \(step.floor)  Sala \(step.roomNumberOnFloor)/4  ·  \(suffix)"
-    }
-
-    /// Remove inimigos e bosses da sala; limpa balas em jogo.
-    private func clearCombatEntities() {
-        for e in enemies where e.parent != nil {
-            e.removeFromParent()
-        }
-        enemies.removeAll()
-
-        squared?.removeFromParent()
-        squared = nil
-
-        plusMiniboss?.removeFromParent()
-        plusMiniboss = nil
-
-        pentagonBoss?.removeFromParent()
-        pentagonBoss = nil
-
-        for b in bullets where b.parent != nil {
-            b.removeFromParent()
-        }
-        bullets.removeAll()
-
-        targetIndicator?.removeFromParent()
-        targetIndicator = nil
-    }
-
-    private func loadCurrentRoom() {
-        guard currentStepIndex < roomSteps.count else { return }
-
-        clearCombatEntities()
-
-        let step = roomSteps[currentStepIndex]
-        updateRoomProgressLabel(for: step)
-
-        let diff = DungeonMap.difficulty(forFloor: step.floor)
-
-        switch step.kind {
-        case .combat:
-            spawnCombatRoom(difficulty: diff)
-        case .minibossPlus:
-            let plus = PlusNode()
-            plus.position = CGPoint(x: size.width * 0.5, y: size.height * 0.58)
-            addChild(plus)
-            plusMiniboss = plus
-        case .bossPentagon:
-            let boss = PentagonNode()
-            boss.position = CGPoint(x: size.width * 0.5, y: size.height * 0.58)
-            addChild(boss)
-            pentagonBoss = boss
-        }
-
-        player.position = CGPoint(x: size.width / 2, y: size.height * 0.28)
-    }
-
-    private func spawnCombatRoom(difficulty: FloorDifficulty) {
-        for _ in 0..<difficulty.combatTriangleCount {
-            let enemy = TriangleNode(gameState: gameState, moveSpeed: difficulty.triangleMoveSpeed)
-            enemy.position = CGPoint(
-                x: CGFloat.random(in: 100...(size.width - 100)),
-                y: CGFloat.random(in: 100...(size.height - 100))
-            )
-            addChild(enemy)
-            enemies.append(enemy)
-        }
-
-        if difficulty.combatSquaredCount >= 1 {
-            let sq = SquaredNode(moveSpeed: difficulty.squaredMoveSpeed)
-            sq.position = CGPoint(
-                x: CGFloat.random(in: 120...(size.width - 120)),
-                y: CGFloat.random(in: 120...(size.height - 120))
-            )
-            addChild(sq)
-            squared = sq
-        }
+    private func setupMinimap() {
+        let side = min(140, max(96, viewportSize.width * 0.2))
+        let panel = CGSize(width: side, height: side)
+        let map = DungeonMinimapNode(mapPixelSize: panel)
+        map.position = CGPoint(
+            x: viewportSize.width / 2 - 12 - panel.width,
+            y: viewportSize.height / 2 - 12 - panel.height
+        )
+        hudNode.addChild(map)
+        minimap = map
     }
 
     func setupJoystick() {
         joystick = JoystickNode()
         joystick.zPosition = 10
-        addChild(joystick)
+        hudNode.addChild(joystick)
     }
 
     func spawnPlayer() {
         player = PlayerNode(gameState: gameState)
-        player.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        addChild(player)
+        player.zPosition = 2
+        worldNode.addChild(player)
     }
 
-    func isInJoystickArea(_ p: CGPoint) -> Bool { p.x < size.width * 0.4 }
+    // MARK: - Mapa do andar
 
-    func isInFireArea(_ p: CGPoint) -> Bool { p.x > size.width * 0.6 }
+    private func buildFloor(_ floor: Int) {
+        currentFloor = floor
+        clearedCombatZoneIds.removeAll()
+        activeCombatZoneId = nil
+        bossSpawnedThisFloor = false
+        currentZoneId = "start"
+
+        clearCombatEntities()
+        mapRoot.removeAllChildren()
+        doorNodes.removeAll()
+
+        zonesById = DungeonFloorPlan.zonesById(for: floor)
+        passages = DungeonFloorPlan.passages(for: floor)
+        currentWorldBounds = DungeonFloorPlan.worldBounds(for: floor)
+
+        drawMapGeometry()
+        createDoors()
+        refreshDoorStates()
+
+        minimap?.rebuild(for: floor)
+        minimap?.setClearedRooms(clearedCombatZoneIds)
+        minimap?.setHighlightedRoom(id: currentZoneId)
+
+        if let start = zonesById["start"] {
+            player.position = CGPoint(x: start.walkBounds.midX, y: start.walkBounds.midY)
+        }
+        updateHUD()
+        snapCameraToPlayer()
+    }
+
+    private func drawMapGeometry() {
+        let outer = SKShapeNode(rect: currentWorldBounds)
+        outer.fillColor = DungeonMapPalette.worldBackground
+        outer.strokeColor = .clear
+        outer.zPosition = -3
+        mapRoot.addChild(outer)
+
+        func getSegments(start: CGFloat, end: CGFloat, gaps: [(CGFloat, CGFloat)]) -> [(CGFloat, CGFloat)] {
+            var result: [(CGFloat, CGFloat)] = []
+            let sortedGaps = gaps
+                .map { (min($0.0, $0.1), max($0.0, $0.1)) }
+                .filter { $0.1 > start && $0.0 < end }
+                .sorted { $0.0 < $1.0 }
+            
+            var current = start
+            for (gStart, gEnd) in sortedGaps {
+                if gStart > current {
+                    result.append((current, gStart))
+                }
+                current = max(current, gEnd)
+            }
+            if current < end {
+                result.append((current, end))
+            }
+            return result
+        }
+
+        for zone in zonesById.values.sorted(by: { $0.floorRect.minY > $1.floorRect.minY }) {
+            // 1. Desenhar o chão da zona (sem borda)
+            let floor = SKShapeNode(rect: zone.floorRect)
+            floor.zPosition = -2
+            floor.strokeColor = .clear
+
+            switch zone.kind {
+            case .start:
+                floor.fillColor = DungeonMapPalette.startRoomFill
+            case .corridor:
+                floor.fillColor = DungeonMapPalette.corridorFill
+            case .combat:
+                floor.fillColor = DungeonMapPalette.roomFill
+            case .boss:
+                floor.fillColor = DungeonMapPalette.bossRoomFill
+            }
+            mapRoot.addChild(floor)
+
+            // 2. Desenhar as bordas
+            let borderPath = CGMutablePath()
+            let rect = zone.floorRect
+
+            if zone.kind == .corridor {
+                // Desenhar apenas as paredes laterais do corredor
+                let isVertical = rect.width < rect.height
+                if isVertical {
+                    borderPath.move(to: CGPoint(x: rect.minX, y: rect.minY))
+                    borderPath.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+                    borderPath.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+                    borderPath.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+                } else {
+                    borderPath.move(to: CGPoint(x: rect.minX, y: rect.minY))
+                    borderPath.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+                    borderPath.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+                    borderPath.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+                }
+            } else {
+                // Desenhar as bordas da sala com aberturas (gaps) onde houver passagens
+                let minX = rect.minX
+                let maxX = rect.maxX
+                let minY = rect.minY
+                let maxY = rect.maxY
+
+                let roomPassages = passages.filter { $0.connects(zone.id) }
+                
+                var bottomGaps: [(CGFloat, CGFloat)] = []
+                var topGaps: [(CGFloat, CGFloat)] = []
+                var leftGaps: [(CGFloat, CGFloat)] = []
+                var rightGaps: [(CGFloat, CGFloat)] = []
+                
+                let tolerance: CGFloat = 2.0
+                for p in roomPassages {
+                    let pRect = p.rect
+                    
+                    // Borda inferior
+                    if pRect.minY - tolerance <= minY && pRect.maxY + tolerance >= minY {
+                        bottomGaps.append((pRect.minX, pRect.maxX))
+                    }
+                    // Borda superior
+                    if pRect.minY - tolerance <= maxY && pRect.maxY + tolerance >= maxY {
+                        topGaps.append((pRect.minX, pRect.maxX))
+                    }
+                    // Borda esquerda
+                    if pRect.minX - tolerance <= minX && pRect.maxX + tolerance >= minX {
+                        leftGaps.append((pRect.minY, pRect.maxY))
+                    }
+                    // Borda direita
+                    if pRect.minX - tolerance <= maxX && pRect.maxX + tolerance >= maxX {
+                        rightGaps.append((pRect.minY, pRect.maxY))
+                    }
+                }
+
+                for (x1, x2) in getSegments(start: minX, end: maxX, gaps: bottomGaps) {
+                    borderPath.move(to: CGPoint(x: x1, y: minY))
+                    borderPath.addLine(to: CGPoint(x: x2, y: minY))
+                }
+                for (x1, x2) in getSegments(start: minX, end: maxX, gaps: topGaps) {
+                    borderPath.move(to: CGPoint(x: x1, y: maxY))
+                    borderPath.addLine(to: CGPoint(x: x2, y: maxY))
+                }
+                for (y1, y2) in getSegments(start: minY, end: maxY, gaps: leftGaps) {
+                    borderPath.move(to: CGPoint(x: minX, y: y1))
+                    borderPath.addLine(to: CGPoint(x: minX, y: y2))
+                }
+                for (y1, y2) in getSegments(start: minY, end: maxY, gaps: rightGaps) {
+                    borderPath.move(to: CGPoint(x: maxX, y: y1))
+                    borderPath.addLine(to: CGPoint(x: maxX, y: y2))
+                }
+            }
+
+            let borderNode = SKShapeNode(path: borderPath)
+            borderNode.zPosition = -1
+            borderNode.strokeColor = DungeonMapPalette.roomStroke
+            borderNode.lineWidth = DungeonMapPalette.roomStrokeWidth
+            mapRoot.addChild(borderNode)
+        }
+    }
+
+    private func createDoors() {
+        for passage in passages {
+            let door = DungeonDoorNode(passage: passage, zonesById: zonesById)
+            mapRoot.addChild(door)
+            doorNodes[passage.id] = door
+        }
+    }
+
+    private func refreshDoorStates() {
+        let allCombatCleared = DungeonFloorPlan.requiredCombatZoneIds(for: currentFloor)
+            .isSubset(of: clearedCombatZoneIds)
+
+        for passage in passages {
+            guard let door = doorNodes[passage.id] else { continue }
+
+            if DungeonFloorPlan.involvesBoss(passage) {
+                door.setOpen(allCombatCleared, animated: false)
+                continue
+            }
+
+            if let active = activeCombatZoneId, passage.connects(active) {
+                door.setOpen(false, animated: false)
+                continue
+            }
+
+            door.setOpen(true, animated: false)
+        }
+    }
+
+    private func closeDoors(forCombatZone zoneId: String) {
+        for passage in DungeonFloorPlan.passages(forZone: zoneId, floor: currentFloor) {
+            doorNodes[passage.id]?.setOpen(false, animated: true)
+        }
+    }
+
+    private func openDoors(forCombatZone zoneId: String) {
+        for passage in DungeonFloorPlan.passages(forZone: zoneId, floor: currentFloor) {
+            if DungeonFloorPlan.involvesBoss(passage) {
+                let cleared = DungeonFloorPlan.requiredCombatZoneIds(for: currentFloor)
+                    .isSubset(of: clearedCombatZoneIds)
+                doorNodes[passage.id]?.setOpen(cleared, animated: true)
+            } else {
+                doorNodes[passage.id]?.setOpen(true, animated: true)
+            }
+        }
+    }
+
+    // MARK: - Zonas e movimento
+
+    private func zoneId(at point: CGPoint) -> String? {
+        DungeonFloorPlan.zoneId(at: point, floor: currentFloor)
+    }
+
+    private func isPointWalkable(_ point: CGPoint) -> Bool {
+        if let locked = activeCombatZoneId {
+            return zonesById[locked]?.walkBounds.contains(point) ?? false
+        }
+        
+        for zone in zonesById.values {
+            if zone.walkBounds.contains(point) {
+                return true
+            }
+        }
+        for passage in passages {
+            guard let door = doorNodes[passage.id], door.isOpen else { continue }
+            if extendedPassageRect(passage).contains(point) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func isBulletPositionWalkable(_ point: CGPoint) -> Bool {
+        for passage in passages {
+            guard let door = doorNodes[passage.id], !door.isOpen else { continue }
+            if passage.rect.contains(point) {
+                return false
+            }
+        }
+        
+        if let locked = activeCombatZoneId {
+            if zonesById[locked]?.floorRect.contains(point) ?? false {
+                return true
+            }
+            for passage in passages {
+                guard let door = doorNodes[passage.id], door.isOpen else { continue }
+                if passage.rect.contains(point) && passage.connects(locked) {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        for zone in zonesById.values {
+            if zone.floorRect.contains(point) {
+                return true
+            }
+        }
+        for passage in passages {
+            if passage.rect.contains(point) {
+                return true
+            }
+        }
+        
+        return false
+    }
+
+    private func isPassageVertical(_ passage: DungeonPassage) -> Bool {
+        guard let zoneA = zonesById[passage.zoneA],
+              let zoneB = zonesById[passage.zoneB] else {
+            return passage.rect.width < passage.rect.height
+        }
+        let dy = abs(zoneA.floorRect.midY - zoneB.floorRect.midY)
+        let dx = abs(zoneA.floorRect.midX - zoneB.floorRect.midX)
+        return dy > dx
+    }
+
+    private func extendedPassageRect(_ passage: DungeonPassage) -> CGRect {
+        let r = passage.rect
+        let isVertical = isPassageVertical(passage)
+        let inset: CGFloat = 12
+        if isVertical {
+            return CGRect(
+                x: r.minX + inset,
+                y: r.minY - 80,
+                width: r.width - 2 * inset,
+                height: r.height + 160
+            )
+        } else {
+            return CGRect(
+                x: r.minX - 80,
+                y: r.minY + inset,
+                width: r.width + 160,
+                height: r.height - 2 * inset
+            )
+        }
+    }
+
+    private func handleZoneChange(from previous: String, to newZone: String) {
+        guard newZone != previous else { return }
+
+        currentZoneId = newZone
+        minimap?.setHighlightedRoom(id: newZone)
+        updateHUD()
+
+        guard let zone = zonesById[newZone] else { return }
+
+        if zone.kind == .combat, !clearedCombatZoneIds.contains(newZone) {
+            beginCombat(in: newZone)
+        }
+
+        if zone.kind == .boss, allRequiredCombatCleared() {
+            spawnBossIfNeeded(in: zone)
+        }
+    }
+
+    private func allRequiredCombatCleared() -> Bool {
+        DungeonFloorPlan.requiredCombatZoneIds(for: currentFloor)
+            .isSubset(of: clearedCombatZoneIds)
+    }
+
+    private func beginCombat(in zoneId: String) {
+        guard activeCombatZoneId != zoneId else { return }
+        activeCombatZoneId = zoneId
+        
+        // Empurrar o jogador para dentro da área jogável da sala para evitar ficar preso na porta
+        if let zone = zonesById[zoneId], let player = player {
+            let bounds = zone.walkBounds
+            player.position = CGPoint(
+                x: min(max(player.position.x, bounds.minX), bounds.maxX),
+                y: min(max(player.position.y, bounds.minY), bounds.maxY)
+            )
+        }
+        
+        closeDoors(forCombatZone: zoneId)
+        spawnCombat(in: zoneId)
+    }
+
+    private func spawnCombat(in zoneId: String) {
+        guard let zone = zonesById[zoneId], zone.kind == .combat else { return }
+        clearCombatEntities()
+
+        let diff = DungeonMap.difficulty(forFloor: currentFloor)
+        let b = zone.walkBounds.insetBy(dx: 36, dy: 36)
+
+        for _ in 0..<diff.combatTriangleCount {
+            let enemy = TriangleNode(gameState: gameState, moveSpeed: diff.triangleMoveSpeed)
+            enemy.position = CGPoint(
+                x: CGFloat.random(in: b.minX...b.maxX),
+                y: CGFloat.random(in: b.minY...b.maxY)
+            )
+            worldNode.addChild(enemy)
+            enemies.append(enemy)
+        }
+
+        if diff.combatSquaredCount >= 1 {
+            let sq = SquaredNode(moveSpeed: diff.squaredMoveSpeed)
+            sq.position = CGPoint(
+                x: CGFloat.random(in: b.minX...b.maxX),
+                y: CGFloat.random(in: b.minY...b.maxY)
+            )
+            worldNode.addChild(sq)
+            squared = sq
+        }
+    }
+
+    private func spawnBossIfNeeded(in zone: DungeonZone) {
+        guard !bossSpawnedThisFloor, zone.kind == .boss else { return }
+        bossSpawnedThisFloor = true
+
+        let center = CGPoint(x: zone.walkBounds.midX, y: zone.walkBounds.midY + 40)
+
+        if currentFloor == 1 {
+            let plus = PlusNode()
+            plus.position = center
+            worldNode.addChild(plus)
+            plusMiniboss = plus
+        } else {
+            let boss = PentagonNode()
+            boss.position = center
+            worldNode.addChild(boss)
+            pentagonBoss = boss
+        }
+    }
+
+    private func onCombatZoneCleared(_ zoneId: String) {
+        clearedCombatZoneIds.insert(zoneId)
+        activeCombatZoneId = nil
+        openDoors(forCombatZone: zoneId)
+        refreshDoorStates()
+        minimap?.setClearedRooms(clearedCombatZoneIds)
+        updateHUD()
+    }
+
+    private func onBossDefeated() {
+        if currentFloor == 1 {
+            let wait = SKAction.wait(forDuration: 1)
+            let next = SKAction.run { [weak self] in
+                self?.buildFloor(2)
+            }
+            run(SKAction.sequence([wait, next]))
+        } else {
+            showRunVictory()
+        }
+    }
+
+    private func updateHUD() {
+        guard let zone = zonesById[currentZoneId] else { return }
+        let cleared = clearedCombatZoneIds.count
+        let required = DungeonFloorPlan.requiredCombatZoneIds(for: currentFloor).count
+        var suffix = zone.displayTitle
+        if zone.kind == .combat {
+            suffix += clearedCombatZoneIds.contains(zone.id) ? " · Limpa" : " · Combate"
+        } else if zone.kind == .boss {
+            suffix += bossSpawnedThisFloor ? " · Boss" : (allRequiredCombatCleared() ? " · Aberta" : " · Bloqueada")
+        }
+        roomProgressLabel?.text = "Andar \(currentFloor)  \(suffix)  (\(cleared)/\(required))"
+    }
+
+    // MARK: - Câmara
+
+    private func snapCameraToPlayer() {
+        gameCamera.position = clampedCameraPosition(focus: player.position)
+    }
+
+    private func updateCameraFollow(deltaTime: TimeInterval) {
+        let target = clampedCameraPosition(focus: player.position)
+        guard deltaTime > 0 else {
+            gameCamera.position = target
+            return
+        }
+        let t = min(1, cameraFollowSmoothing * CGFloat(deltaTime))
+        gameCamera.position = CGPoint(
+            x: gameCamera.position.x + (target.x - gameCamera.position.x) * t,
+            y: gameCamera.position.y + (target.y - gameCamera.position.y) * t
+        )
+    }
+
+    private func clampedCameraPosition(focus: CGPoint) -> CGPoint {
+        let halfW = viewportSize.width / 2
+        let halfH = viewportSize.height / 2
+        let minX = currentWorldBounds.minX + halfW
+        let maxX = currentWorldBounds.maxX - halfW
+        let minY = currentWorldBounds.minY + halfH
+        let maxY = currentWorldBounds.maxY - halfH
+
+        var x = focus.x
+        var y = focus.y
+        if minX > maxX { x = currentWorldBounds.midX } else { x = min(max(x, minX), maxX) }
+        if minY > maxY { y = currentWorldBounds.midY } else { y = min(max(y, minY), maxY) }
+        return CGPoint(x: x, y: y)
+    }
+
+    // MARK: - Combate / entidades
+
+    private func clearCombatEntities() {
+        for e in enemies where e.parent != nil { e.removeFromParent() }
+        enemies.removeAll()
+        squared?.removeFromParent()
+        squared = nil
+        plusMiniboss?.removeFromParent()
+        plusMiniboss = nil
+        pentagonBoss?.removeFromParent()
+        pentagonBoss = nil
+        for b in bullets where b.parent != nil { b.removeFromParent() }
+        bullets.removeAll()
+        targetIndicator?.removeFromParent()
+        targetIndicator = nil
+    }
+
+    private func isCombatClearInActiveZone() -> Bool {
+        if enemies.contains(where: { $0.parent != nil }) { return false }
+        if let sq = squared, sq.parent != nil, sq.hp > 0 { return false }
+        return true
+    }
+
+    private func isBossDead() -> Bool {
+        if let plus = plusMiniboss {
+            return plus.parent == nil || plus.hp <= 0
+        }
+        if let boss = pentagonBoss {
+            return boss.parent == nil || boss.hp <= 0
+        }
+        return false
+    }
+
+    private func evaluateProgress() {
+        guard !runCompleted else { return }
+
+        if let active = activeCombatZoneId, isCombatClearInActiveZone() {
+            onCombatZoneCleared(active)
+        }
+
+        if bossSpawnedThisFloor, isBossDead() {
+            onBossDefeated()
+        }
+    }
+
+    // MARK: - Input
+
+    func isInJoystickArea(_ p: CGPoint) -> Bool { p.x < -viewportSize.width * 0.1 }
+    func isInFireArea(_ p: CGPoint) -> Bool { p.x > viewportSize.width * 0.1 }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches {
-            let loc = t.location(in: self)
-
+            let loc = t.location(in: gameCamera)
             if joystickTouch == nil && isInJoystickArea(loc) {
                 joystickTouch = t
                 joystick.appear(at: loc)
@@ -181,18 +634,13 @@ class GameScene: SKScene {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let jt = joystickTouch, touches.contains(jt) else { return }
-        joystick.update(to: jt.location(in: self))
+        joystick.update(to: jt.location(in: gameCamera))
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches {
-            if t == joystickTouch {
-                joystickTouch = nil
-                joystick.disappear()
-            }
-            if t == fireTouch {
-                fireTouch = nil
-            }
+            if t == joystickTouch { joystickTouch = nil; joystick.disappear() }
+            if t == fireTouch { fireTouch = nil }
         }
     }
 
@@ -200,56 +648,75 @@ class GameScene: SKScene {
         touchesEnded(touches, with: event)
     }
 
+    // MARK: - Update
+
     override func update(_ currentTime: TimeInterval) {
         guard let player = player, let joystick = joystick else { return }
 
         let deltaTime = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
         lastUpdateTime = currentTime
 
+        let previousZone = currentZoneId
+        let previousPosition = player.position
+
         let movementAngle: CGFloat? = joystick.direction != .zero
             ? atan2(joystick.direction.dy, joystick.direction.dx)
             : nil
 
-        player.move(direction: joystick.direction, deltaTime: deltaTime)
+        if player.gameState.isAlive {
+            let dx = joystick.direction.dx * player.moveSpeed * CGFloat(deltaTime)
+            let dy = joystick.direction.dy * player.moveSpeed * CGFloat(deltaTime)
+            
+            var newPos = player.position
+            
+            // Deslizamento nas paredes (Sliding)
+            let testX = CGPoint(x: player.position.x + dx, y: player.position.y)
+            if isPointWalkable(testX) {
+                newPos.x = testX.x
+            }
+            let testY = CGPoint(x: newPos.x, y: player.position.y + dy)
+            if isPointWalkable(testY) {
+                newPos.y = testY.y
+            }
+            
+            player.position = newPos
+        }
+
+        if player.position != previousPosition {
+            if let newZone = zoneId(at: player.position) {
+                handleZoneChange(from: previousZone, to: newZone)
+            }
+        }
+
+        updateCameraFollow(deltaTime: deltaTime)
 
         if let squared = squared, squared.parent != nil {
             squared.move(towards: player.position, deltaTime: deltaTime)
         }
-
         if let plus = plusMiniboss, plus.parent != nil {
             plus.move(towards: player.position, deltaTime: deltaTime)
         }
-
         if let boss = pentagonBoss, boss.parent != nil {
             boss.move(towards: player.position, deltaTime: deltaTime)
         }
-
         for enemy in enemies where enemy.parent != nil {
             enemy.move(towards: player.position, deltaTime: deltaTime)
         }
 
-        let closestTarget = findClosestTarget(to: player)
-
-        if let target = closestTarget {
+        if let target = findClosestTarget(to: player) {
             let dx = target.position.x - player.position.x
             let dy = target.position.y - player.position.y
             let angle = atan2(dy, dx)
-
             player.fireDirection = CGVector(dx: cos(angle), dy: sin(angle))
-
             if isFiring {
                 player.zRotation = angle
             } else if let movementAngle = movementAngle {
                 player.zRotation = movementAngle
             }
-
             updateTargetIndicator(at: target.position)
         } else {
-            if targetIndicator != nil {
-                targetIndicator?.removeFromParent()
-                targetIndicator = nil
-            }
-
+            targetIndicator?.removeFromParent()
+            targetIndicator = nil
             if let movementAngle = movementAngle {
                 player.zRotation = movementAngle
             }
@@ -257,72 +724,34 @@ class GameScene: SKScene {
 
         if isFiring && currentTime - lastFireTime >= fireRate {
             let bullet = BulletNode(position: player.position, direction: player.fireDirection)
-            addChild(bullet)
+            worldNode.addChild(bullet)
             bullets.append(bullet)
             lastFireTime = currentTime
         }
 
         for bullet in bullets {
             bullet.update(deltaTime: deltaTime)
+            if !isBulletPositionWalkable(bullet.position) {
+                bullet.removeFromParent()
+            }
         }
-        bullets.removeAll { $0.isOffScreen(sceneSize: size) }
+        bullets.removeAll { $0.isOutside(bounds: currentWorldBounds) }
         bullets.removeAll { $0.parent == nil }
 
         checkBulletEnemyCollisions()
-        evaluateRoomProgress()
-    }
-
-    private func evaluateRoomProgress() {
-        guard !isAdvancingRoom, !runCompleted else { return }
-        guard isCurrentRoomClear() else { return }
-
-        let step = roomSteps[currentStepIndex]
-        if step.isLastStep {
-            showRunVictory()
-            return
-        }
-
-        isAdvancingRoom = true
-        let wait = SKAction.wait(forDuration: 0.75)
-        let advance = SKAction.run { [weak self] in
-            self?.goToNextRoom()
-        }
-        run(SKAction.sequence([wait, advance]))
-    }
-
-    private func goToNextRoom() {
-        isAdvancingRoom = false
-        currentStepIndex += 1
-        loadCurrentRoom()
+        evaluateProgress()
     }
 
     private func showRunVictory() {
         runCompleted = true
         roomProgressLabel?.text = "Vitória — dungeon concluída"
-
         let banner = SKLabelNode(fontNamed: "Menlo-Bold")
         banner.text = "Vitória!"
         banner.fontSize = 28
         banner.fontColor = .green
-        banner.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        banner.position = .zero
         banner.zPosition = 25
-        addChild(banner)
-    }
-
-    private func isCurrentRoomClear() -> Bool {
-        if enemies.contains(where: { $0.parent != nil }) {
-            return false
-        }
-        if let sq = squared, sq.parent != nil, sq.hp > 0 {
-            return false
-        }
-        if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
-            return false
-        }
-        if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
-            return false
-        }
-        return true
+        hudNode.addChild(banner)
     }
 
     private func checkBulletEnemyCollisions() {
@@ -333,64 +762,38 @@ class GameScene: SKScene {
             guard !bulletIndicesToRemove.contains(bulletIndex) else { continue }
 
             if let sq = squared, sq.parent != nil, sq.hp > 0 {
-                let dSq = hypot(
-                    bullet.position.x - sq.position.x,
-                    bullet.position.y - sq.position.y
-                )
-                if dSq < 24 {
+                if hypot(bullet.position.x - sq.position.x, bullet.position.y - sq.position.y) < 24 {
                     sq.takeDamage(1)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
-                    if sq.parent == nil {
-                        gameState.score += 10
-                        squared = nil
-                    }
+                    if sq.parent == nil { gameState.score += 10; squared = nil }
                     continue
                 }
             }
 
             if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
-                let d = hypot(
-                    bullet.position.x - plus.position.x,
-                    bullet.position.y - plus.position.y
-                )
-                if d < 28 {
+                if hypot(bullet.position.x - plus.position.x, bullet.position.y - plus.position.y) < 28 {
                     plus.takeDamage(1)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
-                    if plus.parent == nil {
-                        gameState.score += 50
-                        plusMiniboss = nil
-                    }
+                    if plus.parent == nil { gameState.score += 50; plusMiniboss = nil }
                     continue
                 }
             }
 
             if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
-                let d = hypot(
-                    bullet.position.x - boss.position.x,
-                    bullet.position.y - boss.position.y
-                )
-                if d < 26 {
+                if hypot(bullet.position.x - boss.position.x, bullet.position.y - boss.position.y) < 26 {
                     boss.takeDamage(1)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
-                    if boss.parent == nil {
-                        gameState.score += 100
-                        pentagonBoss = nil
-                    }
+                    if boss.parent == nil { gameState.score += 100; pentagonBoss = nil }
                     continue
                 }
             }
 
             for (enemyIndex, enemy) in enemies.enumerated() {
                 guard !enemyIndicesToRemove.contains(enemyIndex) else { continue }
-
-                let distance = hypot(
-                    bullet.position.x - enemy.position.x,
-                    bullet.position.y - enemy.position.y
-                )
-                if distance < 20 {
+                if hypot(bullet.position.x - enemy.position.x, bullet.position.y - enemy.position.y) < 20 {
                     enemy.removeFromParent()
                     enemyIndicesToRemove.insert(enemyIndex)
                     bullet.removeFromParent()
@@ -401,45 +804,24 @@ class GameScene: SKScene {
             }
         }
 
-        for index in bulletIndicesToRemove.sorted(by: >) {
-            bullets.remove(at: index)
-        }
-        for index in enemyIndicesToRemove.sorted(by: >) {
-            enemies.remove(at: index)
-        }
+        for index in bulletIndicesToRemove.sorted(by: >) { bullets.remove(at: index) }
+        for index in enemyIndicesToRemove.sorted(by: >) { enemies.remove(at: index) }
     }
 
-    /// Alvo mais próximo: triângulos, quadrado, Plus ou Pentagon.
     func findClosestTarget(to player: PlayerNode) -> SKNode? {
         var closest: SKNode?
         var closestDistance = CGFloat.greatestFiniteMagnitude
 
         func consider(_ node: SKNode?, alive: Bool) {
             guard let node = node, alive else { return }
-            let dx = node.position.x - player.position.x
-            let dy = node.position.y - player.position.y
-            let distance = hypot(dx, dy)
-            if distance < closestDistance {
-                closestDistance = distance
-                closest = node
-            }
+            let d = hypot(node.position.x - player.position.x, node.position.y - player.position.y)
+            if d < closestDistance { closestDistance = d; closest = node }
         }
 
-        if let sq = squared, sq.parent != nil, sq.hp > 0 {
-            consider(sq, alive: true)
-        }
-
-        if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
-            consider(plus, alive: true)
-        }
-
-        if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
-            consider(boss, alive: true)
-        }
-
-        for enemy in enemies where enemy.parent != nil {
-            consider(enemy, alive: true)
-        }
+        if let sq = squared, sq.parent != nil, sq.hp > 0 { consider(sq, alive: true) }
+        if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 { consider(plus, alive: true) }
+        if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 { consider(boss, alive: true) }
+        for enemy in enemies where enemy.parent != nil { consider(enemy, alive: true) }
 
         return closest
     }
@@ -451,9 +833,8 @@ class GameScene: SKScene {
             targetIndicator?.lineWidth = 2
             targetIndicator?.fillColor = .clear
             targetIndicator?.zPosition = 1
-            addChild(targetIndicator!)
+            worldNode.addChild(targetIndicator!)
         }
-
         targetIndicator?.position = position
     }
 }

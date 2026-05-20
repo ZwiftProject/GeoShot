@@ -35,10 +35,11 @@ class BulletNode: SKShapeNode {
         position = CGPoint(x: position.x + dx, y: position.y + dy)
     }
     
-    /// Verifica se a bala saiu dos limites da cena
-    func isOffScreen(sceneSize: CGSize) -> Bool {
-        let margin: CGFloat = 50
-        return position.x < -margin || position.x > sceneSize.width + margin ||
-               position.y < -margin || position.y > sceneSize.height + margin
+    /// Verifica se a bala saiu dos limites do mundo da sala.
+    func isOutside(bounds: CGRect, margin: CGFloat = 50) -> Bool {
+        position.x < bounds.minX - margin
+            || position.x > bounds.maxX + margin
+            || position.y < bounds.minY - margin
+            || position.y > bounds.maxY + margin
     }
 }

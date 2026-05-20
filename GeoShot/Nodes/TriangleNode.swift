@@ -12,13 +12,14 @@
 import SpriteKit
 
 class TriangleNode: SKShapeNode {
-    
-    let moveSpeed: CGFloat = 10
-    var health: Int = 1           
-    var gameState: GameState       
-    
-    init(gameState: GameState) {
+
+    let moveSpeed: CGFloat
+    var health: Int = 1
+    var gameState: GameState
+
+    init(gameState: GameState, moveSpeed: CGFloat = 10) {
         self.gameState = gameState
+        self.moveSpeed = moveSpeed
         super.init()
         setupShape()
     }

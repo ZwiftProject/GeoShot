@@ -7,11 +7,13 @@ import SpriteKit
 
 class SquaredNode: SKShapeNode {
 
-    let moveSpeed: CGFloat = 100
-    let maxHp: Int = 3
+    let moveSpeed: CGFloat
+    let maxHp: Int
     private(set) var hp: Int
 
-    override init() {
+    init(moveSpeed: CGFloat = 100, maxHp: Int = 3) {
+        self.moveSpeed = moveSpeed
+        self.maxHp = maxHp
         hp = maxHp
         super.init()
         setupShape()

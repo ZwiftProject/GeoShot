@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7E10D062FA2203E00809E35 /* DungeonMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D032FA2203E00809E35 /* DungeonMap.swift */; };
+		A7E10D072FA2203E00809E35 /* PlusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D042FA2203E00809E35 /* PlusNode.swift */; };
+		A7E10D082FA2203E00809E35 /* PentagonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D052FA2203E00809E35 /* PentagonNode.swift */; };
 		A6886CF52FA2203E00809E35 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF42FA2203E00809E35 /* GameState.swift */; };
 		A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF62FA2207B00809E35 /* PlayerNode.swift */; };
 		A6886CF92FA2209B00809E35 /* TriangleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF82FA2208B00809E35 /* TriangleNode.swift */; };
@@ -23,6 +26,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A7E10D032FA2203E00809E35 /* DungeonMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonMap.swift; sourceTree = "<group>"; };
+		A7E10D042FA2203E00809E35 /* PlusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusNode.swift; sourceTree = "<group>"; };
+		A7E10D052FA2203E00809E35 /* PentagonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PentagonNode.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E35 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		A6886CF42FA2203E00809E35 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
 		A6886CF62FA2207B00809E35 /* PlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerNode.swift; sourceTree = "<group>"; };
@@ -57,6 +63,8 @@
 				A6886CF82FA2208B00809E35 /* TriangleNode.swift */,
 				A6CDC2572FADDBAE0089F83D /* JoystickNode.swift */,
 				A6E1A0042FB0000100809E35 /* SquaredNode.swift */,
+				A7E10D042FA2203E00809E35 /* PlusNode.swift */,
+				A7E10D052FA2203E00809E35 /* PentagonNode.swift */,
 				BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */,
 			);
 			path = Nodes;
@@ -73,6 +81,7 @@
 		A6886CF12FA21FCF00809E35 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A7E10D032FA2203E00809E35 /* DungeonMap.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -190,6 +199,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7E10D062FA2203E00809E35 /* DungeonMap.swift in Sources */,
+				A7E10D072FA2203E00809E35 /* PlusNode.swift in Sources */,
+				A7E10D082FA2203E00809E35 /* PentagonNode.swift in Sources */,
 				A6CDC2562FADDADF0089F83D /* GameScene.swift in Sources */,
 				BCB6C4C82FB71E0000E715B3 /* BulletNode.swift in Sources */,
 				A6886CF52FA2203E00809E35 /* GameState.swift in Sources */,

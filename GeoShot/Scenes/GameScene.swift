@@ -3,9 +3,8 @@
 //  GeoShot
 //
 // CENA PRINCIPAL DO JOGO
-// - Gerir o jogador, inimigos, joystick
-// - Auto-aim: apontar para o inimigo mais próximo (triângulos + quadrado)
-// - Detetar colisões e controlar lógica do combate
+// - Mapa da dungeon: Andar 1 (3 combates + Plus), Andar 2 (3 combates + Pentagon)
+// - Auto-aim, colisões, progressão de sala
 //
 
 import SpriteKit
@@ -13,9 +12,15 @@ import SpriteKit
 class GameScene: SKScene {
     var gameState = GameState()
     var player: PlayerNode!
-    var squared: SquaredNode!
     var joystick: JoystickNode!
+
+    /// Inimigos da sala atual (triângulos).
     var enemies: [TriangleNode] = []
+    /// Opcional em salas de combate do andar 2.
+    var squared: SquaredNode?
+    var plusMiniboss: PlusNode?
+    var pentagonBoss: PentagonNode?
+
     var bullets: [BulletNode] = []
 
     var joystickTouch: UITouch?
@@ -29,23 +34,119 @@ class GameScene: SKScene {
 
     private var isFiring: Bool { fireTouch != nil }
 
+    private let roomSteps = DungeonMap.runSequence
+    private var currentStepIndex = 0
+    private var isAdvancingRoom = false
+    private var runCompleted = false
+
+    private var roomProgressLabel: SKLabelNode?
+
     override func didMove(to view: SKView) {
         backgroundColor = SKColor(white: 0.05, alpha: 1)
+        setupRoomProgressLabel()
         setupJoystick()
         spawnPlayer()
-        spawnSquared()
-        spawnEnemies()
+        loadCurrentRoom()
     }
 
-    func spawnEnemies() {
-        for _ in 0..<5 {
-            let enemy = TriangleNode(gameState: gameState)
+    private func setupRoomProgressLabel() {
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.fontSize = 14
+        label.alpha = 0.85
+        label.horizontalAlignmentMode = .left
+        label.verticalAlignmentMode = .top
+        label.position = CGPoint(x: 16, y: size.height - 12)
+        label.zPosition = 20
+        label.fontColor = .white
+        addChild(label)
+        roomProgressLabel = label
+    }
+
+    private func updateRoomProgressLabel(for step: DungeonRoomStep) {
+        let suffix: String
+        switch step.kind {
+        case .combat:
+            suffix = "Combate"
+        case .minibossPlus:
+            suffix = "Miniboss +"
+        case .bossPentagon:
+            suffix = "Boss"
+        }
+        roomProgressLabel?.text = "Andar \(step.floor)  Sala \(step.roomNumberOnFloor)/4  ·  \(suffix)"
+    }
+
+    /// Remove inimigos e bosses da sala; limpa balas em jogo.
+    private func clearCombatEntities() {
+        for e in enemies where e.parent != nil {
+            e.removeFromParent()
+        }
+        enemies.removeAll()
+
+        squared?.removeFromParent()
+        squared = nil
+
+        plusMiniboss?.removeFromParent()
+        plusMiniboss = nil
+
+        pentagonBoss?.removeFromParent()
+        pentagonBoss = nil
+
+        for b in bullets where b.parent != nil {
+            b.removeFromParent()
+        }
+        bullets.removeAll()
+
+        targetIndicator?.removeFromParent()
+        targetIndicator = nil
+    }
+
+    private func loadCurrentRoom() {
+        guard currentStepIndex < roomSteps.count else { return }
+
+        clearCombatEntities()
+
+        let step = roomSteps[currentStepIndex]
+        updateRoomProgressLabel(for: step)
+
+        let diff = DungeonMap.difficulty(forFloor: step.floor)
+
+        switch step.kind {
+        case .combat:
+            spawnCombatRoom(difficulty: diff)
+        case .minibossPlus:
+            let plus = PlusNode()
+            plus.position = CGPoint(x: size.width * 0.5, y: size.height * 0.58)
+            addChild(plus)
+            plusMiniboss = plus
+        case .bossPentagon:
+            let boss = PentagonNode()
+            boss.position = CGPoint(x: size.width * 0.5, y: size.height * 0.58)
+            addChild(boss)
+            pentagonBoss = boss
+        }
+
+        player.position = CGPoint(x: size.width / 2, y: size.height * 0.28)
+    }
+
+    private func spawnCombatRoom(difficulty: FloorDifficulty) {
+        for _ in 0..<difficulty.combatTriangleCount {
+            let enemy = TriangleNode(gameState: gameState, moveSpeed: difficulty.triangleMoveSpeed)
             enemy.position = CGPoint(
                 x: CGFloat.random(in: 100...(size.width - 100)),
                 y: CGFloat.random(in: 100...(size.height - 100))
             )
             addChild(enemy)
             enemies.append(enemy)
+        }
+
+        if difficulty.combatSquaredCount >= 1 {
+            let sq = SquaredNode(moveSpeed: difficulty.squaredMoveSpeed)
+            sq.position = CGPoint(
+                x: CGFloat.random(in: 120...(size.width - 120)),
+                y: CGFloat.random(in: 120...(size.height - 120))
+            )
+            addChild(sq)
+            squared = sq
         }
     }
 
@@ -59,12 +160,6 @@ class GameScene: SKScene {
         player = PlayerNode(gameState: gameState)
         player.position = CGPoint(x: size.width / 2, y: size.height / 2)
         addChild(player)
-    }
-
-    func spawnSquared() {
-        squared = SquaredNode()
-        squared.position = CGPoint(x: size.width * 0.25, y: size.height * 0.65)
-        addChild(squared)
     }
 
     func isInJoystickArea(_ p: CGPoint) -> Bool { p.x < size.width * 0.4 }
@@ -121,6 +216,14 @@ class GameScene: SKScene {
             squared.move(towards: player.position, deltaTime: deltaTime)
         }
 
+        if let plus = plusMiniboss, plus.parent != nil {
+            plus.move(towards: player.position, deltaTime: deltaTime)
+        }
+
+        if let boss = pentagonBoss, boss.parent != nil {
+            boss.move(towards: player.position, deltaTime: deltaTime)
+        }
+
         for enemy in enemies where enemy.parent != nil {
             enemy.move(towards: player.position, deltaTime: deltaTime)
         }
@@ -166,6 +269,60 @@ class GameScene: SKScene {
         bullets.removeAll { $0.parent == nil }
 
         checkBulletEnemyCollisions()
+        evaluateRoomProgress()
+    }
+
+    private func evaluateRoomProgress() {
+        guard !isAdvancingRoom, !runCompleted else { return }
+        guard isCurrentRoomClear() else { return }
+
+        let step = roomSteps[currentStepIndex]
+        if step.isLastStep {
+            showRunVictory()
+            return
+        }
+
+        isAdvancingRoom = true
+        let wait = SKAction.wait(forDuration: 0.75)
+        let advance = SKAction.run { [weak self] in
+            self?.goToNextRoom()
+        }
+        run(SKAction.sequence([wait, advance]))
+    }
+
+    private func goToNextRoom() {
+        isAdvancingRoom = false
+        currentStepIndex += 1
+        loadCurrentRoom()
+    }
+
+    private func showRunVictory() {
+        runCompleted = true
+        roomProgressLabel?.text = "Vitória — dungeon concluída"
+
+        let banner = SKLabelNode(fontNamed: "Menlo-Bold")
+        banner.text = "Vitória!"
+        banner.fontSize = 28
+        banner.fontColor = .green
+        banner.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        banner.zPosition = 25
+        addChild(banner)
+    }
+
+    private func isCurrentRoomClear() -> Bool {
+        if enemies.contains(where: { $0.parent != nil }) {
+            return false
+        }
+        if let sq = squared, sq.parent != nil, sq.hp > 0 {
+            return false
+        }
+        if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
+            return false
+        }
+        if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
+            return false
+        }
+        return true
     }
 
     private func checkBulletEnemyCollisions() {
@@ -180,13 +337,47 @@ class GameScene: SKScene {
                     bullet.position.x - sq.position.x,
                     bullet.position.y - sq.position.y
                 )
-                // Raio ~ metade da diagonal do quadrado (lado 34)
                 if dSq < 24 {
                     sq.takeDamage(1)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
                     if sq.parent == nil {
                         gameState.score += 10
+                        squared = nil
+                    }
+                    continue
+                }
+            }
+
+            if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
+                let d = hypot(
+                    bullet.position.x - plus.position.x,
+                    bullet.position.y - plus.position.y
+                )
+                if d < 28 {
+                    plus.takeDamage(1)
+                    bullet.removeFromParent()
+                    bulletIndicesToRemove.insert(bulletIndex)
+                    if plus.parent == nil {
+                        gameState.score += 50
+                        plusMiniboss = nil
+                    }
+                    continue
+                }
+            }
+
+            if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
+                let d = hypot(
+                    bullet.position.x - boss.position.x,
+                    bullet.position.y - boss.position.y
+                )
+                if d < 26 {
+                    boss.takeDamage(1)
+                    bullet.removeFromParent()
+                    bulletIndicesToRemove.insert(bulletIndex)
+                    if boss.parent == nil {
+                        gameState.score += 100
+                        pentagonBoss = nil
                     }
                     continue
                 }
@@ -218,26 +409,36 @@ class GameScene: SKScene {
         }
     }
 
-    /// Inimigo mais próximo: triângulos vivos e o quadrado (se ainda tiver HP).
+    /// Alvo mais próximo: triângulos, quadrado, Plus ou Pentagon.
     func findClosestTarget(to player: PlayerNode) -> SKNode? {
         var closest: SKNode?
         var closestDistance = CGFloat.greatestFiniteMagnitude
 
-        if let sq = squared, sq.parent != nil, sq.hp > 0 {
-            let dx = sq.position.x - player.position.x
-            let dy = sq.position.y - player.position.y
-            closestDistance = hypot(dx, dy)
-            closest = sq
-        }
-
-        for enemy in enemies where enemy.parent != nil {
-            let dx = enemy.position.x - player.position.x
-            let dy = enemy.position.y - player.position.y
+        func consider(_ node: SKNode?, alive: Bool) {
+            guard let node = node, alive else { return }
+            let dx = node.position.x - player.position.x
+            let dy = node.position.y - player.position.y
             let distance = hypot(dx, dy)
             if distance < closestDistance {
                 closestDistance = distance
-                closest = enemy
+                closest = node
             }
+        }
+
+        if let sq = squared, sq.parent != nil, sq.hp > 0 {
+            consider(sq, alive: true)
+        }
+
+        if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
+            consider(plus, alive: true)
+        }
+
+        if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
+            consider(boss, alive: true)
+        }
+
+        for enemy in enemies where enemy.parent != nil {
+            consider(enemy, alive: true)
         }
 
         return closest

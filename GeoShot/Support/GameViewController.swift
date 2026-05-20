@@ -17,7 +17,7 @@ class GameViewController: UIViewController {
         // Present scene once when the view has its final size
         guard !scenePresented, let skView = self.view as? SKView else { return }
 
-        let scene = GameScene(size: skView.bounds.size)
+        let scene = MenuScene(size: skView.bounds.size)
         scene.scaleMode = .resizeFill
         scene.anchorPoint = CGPoint(x: 0, y: 0)
 

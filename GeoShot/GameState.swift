@@ -9,5 +9,7 @@ struct GameState {
     var hp: Int = 6
     var maxHp: Int = 6
     var score: Int = 0
+    var damageDealt: Int = 0
+    var elapsedTime: TimeInterval = 0
     var isAlive: Bool { hp > 0 }
 }

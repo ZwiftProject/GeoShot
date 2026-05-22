@@ -46,6 +46,9 @@ class GameScene: SKScene {
     private var activeCombatZoneId: String?
     private var bossSpawnedThisFloor = false
     private var runCompleted = false
+    private var hpLabel: SKLabelNode?
+    private var elapsedTime: TimeInterval = 0
+    private var playerInvulnerableTime: TimeInterval = 0
 
     private var roomProgressLabel: SKLabelNode?
     private var minimap: DungeonMinimapNode?
@@ -55,6 +58,7 @@ class GameScene: SKScene {
         viewportSize = size
         setupCameraAndWorld()
         setupRoomProgressLabel()
+        setupHPLabel()
         setupMinimap()
         setupJoystick()
         spawnPlayer()
@@ -94,6 +98,26 @@ class GameScene: SKScene {
         label.fontColor = .white
         hudNode.addChild(label)
         roomProgressLabel = label
+    }
+
+    private func setupHPLabel() {
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.fontSize = 14
+        label.alpha = 0.85
+        label.horizontalAlignmentMode = .left
+        label.verticalAlignmentMode = .top
+        label.position = CGPoint(x: -viewportSize.width / 2 + 16, y: viewportSize.height / 2 - 32)
+        label.zPosition = 20
+        label.fontColor = .white
+        hudNode.addChild(label)
+        hpLabel = label
+        updateHPLabel()
+    }
+    
+    private func updateHPLabel() {
+        let hearts = String(repeating: "❤️", count: max(0, gameState.hp))
+        let emptyHearts = String(repeating: "🖤", count: max(0, gameState.maxHp - gameState.hp))
+        hpLabel?.text = "HP: \(hearts)\(emptyHearts)"
     }
 
     private func setupMinimap() {
@@ -656,6 +680,11 @@ class GameScene: SKScene {
         let deltaTime = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
         lastUpdateTime = currentTime
 
+        if player.gameState.isAlive && !runCompleted {
+            elapsedTime = gameState.elapsedTime + deltaTime
+            gameState.elapsedTime = elapsedTime
+        }
+
         let previousZone = currentZoneId
         let previousPosition = player.position
 
@@ -739,19 +768,39 @@ class GameScene: SKScene {
         bullets.removeAll { $0.parent == nil }
 
         checkBulletEnemyCollisions()
+        checkPlayerEnemyCollisions(deltaTime: deltaTime)
         evaluateProgress()
     }
 
     private func showRunVictory() {
         runCompleted = true
         roomProgressLabel?.text = "Vitória — dungeon concluída"
-        let banner = SKLabelNode(fontNamed: "Menlo-Bold")
-        banner.text = "Vitória!"
-        banner.fontSize = 28
-        banner.fontColor = .green
-        banner.position = .zero
-        banner.zPosition = 25
-        hudNode.addChild(banner)
+        
+        let wait = SKAction.wait(forDuration: 1.5)
+        let transition = SKAction.run { [weak self] in
+            guard let self = self, let skView = self.view else { return }
+            let endScene = EndScene(size: self.size, isVictory: true, score: self.gameState.score, time: self.elapsedTime, damageDealt: self.gameState.damageDealt)
+            endScene.scaleMode = .resizeFill
+            endScene.anchorPoint = CGPoint(x: 0, y: 0)
+            let fade = SKTransition.fade(withDuration: 1.2)
+            skView.presentScene(endScene, transition: fade)
+        }
+        run(SKAction.sequence([wait, transition]))
+    }
+
+    private func showGameOver() {
+        runCompleted = true
+        
+        let wait = SKAction.wait(forDuration: 1.5)
+        let transition = SKAction.run { [weak self] in
+            guard let self = self, let skView = self.view else { return }
+            let endScene = EndScene(size: self.size, isVictory: false, score: self.gameState.score, time: self.elapsedTime, damageDealt: self.gameState.damageDealt)
+            endScene.scaleMode = .resizeFill
+            endScene.anchorPoint = CGPoint(x: 0, y: 0)
+            let fade = SKTransition.fade(withDuration: 1.2)
+            skView.presentScene(endScene, transition: fade)
+        }
+        run(SKAction.sequence([wait, transition]))
     }
 
     private func checkBulletEnemyCollisions() {
@@ -766,7 +815,9 @@ class GameScene: SKScene {
                     sq.takeDamage(1)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
+                    gameState.damageDealt += 1
                     if sq.parent == nil { gameState.score += 10; squared = nil }
+                    player.gameState = gameState
                     continue
                 }
             }
@@ -776,7 +827,9 @@ class GameScene: SKScene {
                     plus.takeDamage(1)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
+                    gameState.damageDealt += 1
                     if plus.parent == nil { gameState.score += 50; plusMiniboss = nil }
+                    player.gameState = gameState
                     continue
                 }
             }
@@ -786,7 +839,9 @@ class GameScene: SKScene {
                     boss.takeDamage(1)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
+                    gameState.damageDealt += 1
                     if boss.parent == nil { gameState.score += 100; pentagonBoss = nil }
+                    player.gameState = gameState
                     continue
                 }
             }
@@ -798,7 +853,9 @@ class GameScene: SKScene {
                     enemyIndicesToRemove.insert(enemyIndex)
                     bullet.removeFromParent()
                     bulletIndicesToRemove.insert(bulletIndex)
+                    gameState.damageDealt += 1
                     gameState.score += 10
+                    player.gameState = gameState
                     break
                 }
             }
@@ -806,6 +863,85 @@ class GameScene: SKScene {
 
         for index in bulletIndicesToRemove.sorted(by: >) { bullets.remove(at: index) }
         for index in enemyIndicesToRemove.sorted(by: >) { enemies.remove(at: index) }
+    }
+
+    private func checkPlayerEnemyCollisions(deltaTime: TimeInterval) {
+        guard player.gameState.isAlive && !runCompleted else { return }
+        
+        // Update invulnerability time
+        if playerInvulnerableTime > 0 {
+            playerInvulnerableTime -= deltaTime
+            // Make the player blink while invulnerable
+            let blink = playerInvulnerableTime.truncatingRemainder(dividingBy: 0.15) > 0.07
+            player.alpha = blink ? 0.3 : 1.0
+            
+            if playerInvulnerableTime <= 0 {
+                player.alpha = 1.0
+            }
+            return
+        }
+        
+        var hit = false
+        
+        if let sq = squared, sq.parent != nil, sq.hp > 0 {
+            if hypot(player.position.x - sq.position.x, player.position.y - sq.position.y) < 20 {
+                hit = true
+            }
+        }
+        
+        if !hit, let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
+            if hypot(player.position.x - plus.position.x, player.position.y - plus.position.y) < 24 {
+                hit = true
+            }
+        }
+        
+        if !hit, let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
+            if hypot(player.position.x - boss.position.x, player.position.y - boss.position.y) < 26 {
+                hit = true
+            }
+        }
+        
+        if !hit {
+            for enemy in enemies where enemy.parent != nil {
+                if hypot(player.position.x - enemy.position.x, player.position.y - enemy.position.y) < 18 {
+                    hit = true
+                    break
+                }
+            }
+        }
+        
+        if hit {
+            playerTakeDamage(1)
+        }
+    }
+    
+    private func playerTakeDamage(_ amount: Int) {
+        guard gameState.isAlive else { return }
+        
+        gameState.hp = max(0, gameState.hp - amount)
+        player.gameState = gameState
+        updateHPLabel()
+        
+        // Flash red visual effect
+        let redFlash = SKAction.sequence([
+            SKAction.run { [weak self] in self?.player.fillColor = .red },
+            SKAction.wait(forDuration: 0.1),
+            SKAction.run { [weak self] in self?.player.fillColor = .cyan }
+        ])
+        player.run(redFlash)
+        
+        playerInvulnerableTime = 1.2 // 1.2 seconds of invulnerability
+        
+        if gameState.hp <= 0 {
+            // Player death!
+            let explosion = SKAction.run { [weak self] in
+                guard let self = self else { return }
+                self.player.removeFromParent()
+                // Show game over end screen
+                self.showGameOver()
+            }
+            run(explosion)
+        }
     }
 
     func findClosestTarget(to player: PlayerNode) -> SKNode? {

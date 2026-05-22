@@ -19,6 +19,8 @@
 		A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF62FA2207B00809E35 /* PlayerNode.swift */; };
 		A6886CF92FA2209B00809E35 /* TriangleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF82FA2208B00809E35 /* TriangleNode.swift */; };
 		A6CDC2562FADDADF0089F83D /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF32FA21FF500809E35 /* GameScene.swift */; };
+		A6CDC2562FADDADF0089F83E /* MenuScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF32FA21FF500809E36 /* MenuScene.swift */; };
+		A6CDC2562FADDADF0089F83F /* EndScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF32FA21FF500809E37 /* EndScene.swift */; };
 		A6CDC2582FADDBAE0089F83D /* JoystickNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6CDC2572FADDBAE0089F83D /* JoystickNode.swift */; };
 		A6E1A0032FB0000100809E35 /* SquaredNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E1A0042FB0000100809E35 /* SquaredNode.swift */; };
 		BCB6C4C82FB71E0000E715B3 /* BulletNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */; };
@@ -40,6 +42,8 @@
 		A7E10D042FA2203E00809E35 /* PlusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusNode.swift; sourceTree = "<group>"; };
 		A7E10D052FA2203E00809E35 /* PentagonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PentagonNode.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E35 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
+		A6886CF32FA21FF500809E36 /* MenuScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuScene.swift; sourceTree = "<group>"; };
+		A6886CF32FA21FF500809E37 /* EndScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndScene.swift; sourceTree = "<group>"; };
 		A6886CF42FA2203E00809E35 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
 		A6886CF62FA2207B00809E35 /* PlayerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerNode.swift; sourceTree = "<group>"; };
 		A6886CF82FA2208B00809E35 /* TriangleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriangleNode.swift; sourceTree = "<group>"; };
@@ -86,6 +90,8 @@
 			isa = PBXGroup;
 			children = (
 				A6886CF32FA21FF500809E35 /* GameScene.swift */,
+				A6886CF32FA21FF500809E36 /* MenuScene.swift */,
+				A6886CF32FA21FF500809E37 /* EndScene.swift */,
 			);
 			path = Scenes;
 			sourceTree = "<group>";
@@ -223,6 +229,8 @@
 				A7E10D082FA2203E00809E35 /* PentagonNode.swift in Sources */,
 				A7E10D0C2FA2203E00809E35 /* DungeonMinimapNode.swift in Sources */,
 				A6CDC2562FADDADF0089F83D /* GameScene.swift in Sources */,
+				A6CDC2562FADDADF0089F83E /* MenuScene.swift in Sources */,
+				A6CDC2562FADDADF0089F83F /* EndScene.swift in Sources */,
 				BCB6C4C82FB71E0000E715B3 /* BulletNode.swift in Sources */,
 				A6886CF52FA2203E00809E35 /* GameState.swift in Sources */,
 				BCD0F33B2F995AC70067AA84 /* GameViewController.swift in Sources */,

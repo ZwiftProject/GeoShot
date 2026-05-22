@@ -835,7 +835,7 @@ class GameScene: SKScene {
         guard gameState.isAlive else { return }
 
         gameState.takeDamage(amount)
-        player.hp = gameState.hp
+        player.setHP(gameState.hp)
         updateHPLabel()
         
         // Flash red visual effect

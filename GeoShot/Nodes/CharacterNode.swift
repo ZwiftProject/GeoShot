@@ -35,6 +35,10 @@ class CharacterNode: SKShapeNode {
         hp = min(maxHp, hp + amount)
     }
 
+    func setHP(_ value: Int) {
+        hp = min(max(value, 0), maxHp)
+    }
+
     /// Default death behaviour: remove from parent. Subclasses may override and call `super.die()`.
     func die() {
         removeFromParent()

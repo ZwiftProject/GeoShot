@@ -93,6 +93,53 @@ enum DungeonFloorPlan {
                     floorRect: CGRect(x: 212, y: 1020, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "midWest", displayTitle: "Sala Oeste", kind: .combat,
                     floorRect: CGRect(x: 80, y: 800, width: 320, height: 220), wallInset: 28),
+        DungeonZone(id: "corr_midWest_centerHub", displayTitle: "Corredor", kind: .corridor,
+                    floorRect: CGRect(x: 400, y: 882, width: 200, height: 56), wallInset: 12),
+        DungeonZone(id: "centerHub", displayTitle: "Sala Central", kind: .combat,
+                    floorRect: CGRect(x: 600, y: 800, width: 320, height: 220), wallInset: 28),
+        DungeonZone(id: "corr_centerHub_north", displayTitle: "Corredor", kind: .corridor,
+                    floorRect: CGRect(x: 732, y: 1020, width: 56, height: 280), wallInset: 12),
+        DungeonZone(id: "north", displayTitle: "Sala Norte", kind: .combat,
+                    floorRect: CGRect(x: 600, y: 1300, width: 320, height: 220), wallInset: 28),
+        DungeonZone(id: "corr_centerHub_bossHub", displayTitle: "Corredor", kind: .corridor,
+                    floorRect: CGRect(x: 920, y: 882, width: 200, height: 56), wallInset: 12),
+        DungeonZone(id: "bossHub", displayTitle: "Salão do Chefe", kind: .boss,
+                    floorRect: CGRect(x: 1120, y: 730, width: 360, height: 360), wallInset: 32)
+    ]
+
+    private static let rawFloor1Passages: [DungeonPassage] = [
+        DungeonPassage(id: "p_start_corr", zoneA: "start", zoneB: "corr_start_midWest",
+                       rect: CGRect(x: 212, y: 1272, width: 56, height: 56)),
+        DungeonPassage(id: "p_corr_midWest", zoneA: "corr_start_midWest", zoneB: "midWest",
+                       rect: CGRect(x: 212, y: 992, width: 56, height: 56)),
+        DungeonPassage(id: "p_midWest_centerHub", zoneA: "midWest", zoneB: "corr_midWest_centerHub",
+                       rect: CGRect(x: 372, y: 882, width: 56, height: 56)),
+        DungeonPassage(id: "p_centerHub_left", zoneA: "corr_midWest_centerHub", zoneB: "centerHub",
+                       rect: CGRect(x: 572, y: 882, width: 56, height: 56)),
+        DungeonPassage(id: "p_centerHub_top", zoneA: "centerHub", zoneB: "corr_centerHub_north",
+                       rect: CGRect(x: 732, y: 992, width: 56, height: 56)),
+        DungeonPassage(id: "p_north_corr", zoneA: "corr_centerHub_north", zoneB: "north",
+                       rect: CGRect(x: 732, y: 1272, width: 56, height: 56)),
+        DungeonPassage(id: "p_centerHub_bossCorr", zoneA: "centerHub", zoneB: "corr_centerHub_bossHub",
+                       rect: CGRect(x: 892, y: 882, width: 56, height: 56)),
+        DungeonPassage(id: "p_bossCorr_bossHub", zoneA: "corr_centerHub_bossHub", zoneB: "bossHub",
+                       rect: CGRect(x: 1092, y: 882, width: 56, height: 56))
+    ]
+
+    private static let floor1Zones: [DungeonZone] = rawFloor1Zones.map(scaledZone)
+    private static let floor1Passages: [DungeonPassage] = rawFloor1Passages.map(scaledPassage)
+
+    private static let floor1RequiredCombat: Set<String> = ["midWest", "centerHub", "north"]
+
+    // MARK: - Andar 2
+
+    private static let rawFloor2Zones: [DungeonZone] = [
+        DungeonZone(id: "start", displayTitle: "Entrada", kind: .start,
+                    floorRect: CGRect(x: 80, y: 1300, width: 320, height: 220), wallInset: 28),
+        DungeonZone(id: "corr_start_midWest", displayTitle: "Corredor", kind: .corridor,
+                    floorRect: CGRect(x: 212, y: 1020, width: 56, height: 280), wallInset: 12),
+        DungeonZone(id: "midWest", displayTitle: "Sala Oeste", kind: .combat,
+                    floorRect: CGRect(x: 80, y: 800, width: 320, height: 220), wallInset: 28),
         DungeonZone(id: "corr_midWest_southWest", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 212, y: 520, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "southWest", displayTitle: "Sala Sudoeste", kind: .combat,
@@ -117,7 +164,7 @@ enum DungeonFloorPlan {
                     floorRect: CGRect(x: 1120, y: 730, width: 360, height: 360), wallInset: 32)
     ]
 
-    private static let rawFloor1Passages: [DungeonPassage] = [
+    private static let rawFloor2Passages: [DungeonPassage] = [
         DungeonPassage(id: "p_start_corr", zoneA: "start", zoneB: "corr_start_midWest",
                        rect: CGRect(x: 212, y: 1272, width: 56, height: 56)),
         DungeonPassage(id: "p_corr_midWest", zoneA: "corr_start_midWest", zoneB: "midWest",
@@ -148,20 +195,10 @@ enum DungeonFloorPlan {
                        rect: CGRect(x: 1092, y: 882, width: 56, height: 56))
     ]
 
-    private static let floor1Zones: [DungeonZone] = rawFloor1Zones.map(scaledZone)
-    private static let floor1Passages: [DungeonPassage] = rawFloor1Passages.map(scaledPassage)
+    private static let floor2Zones: [DungeonZone] = rawFloor2Zones.map(scaledZone)
+    private static let floor2Passages: [DungeonPassage] = rawFloor2Passages.map(scaledPassage)
 
-    private static let floor1RequiredCombat: Set<String> = ["midWest", "southWest", "south", "centerHub", "north"]
-
-    // MARK: - Andar 2
-
-    private static let rawFloor2Zones: [DungeonZone] = rawFloor1Zones
-    private static let rawFloor2Passages: [DungeonPassage] = rawFloor1Passages
-
-    private static let floor2Zones: [DungeonZone] = floor1Zones
-    private static let floor2Passages: [DungeonPassage] = floor1Passages
-
-    private static let floor2RequiredCombat: Set<String> = floor1RequiredCombat
+    private static let floor2RequiredCombat: Set<String> = ["midWest", "southWest", "south", "centerHub", "north"]
 
     // MARK: - API
 

@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7E10D162FA2203E00809E35 /* DungeonMapPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D172FA2203E00809E35 /* DungeonMapPalette.swift */; };
+		A7E10D0D2FA2203E00809E35 /* DungeonFloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D0E2FA2203E00809E35 /* DungeonFloorPlan.swift */; };
+		A7E10D0F2FA2203E00809E35 /* DungeonDoorNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D102FA2203E00809E35 /* DungeonDoorNode.swift */; };
+		A7E10D0B2FA2203E00809E35 /* DungeonLayoutMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D092FA2203E00809E35 /* DungeonLayoutMap.swift */; };
+		A7E10D0C2FA2203E00809E35 /* DungeonMinimapNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D0A2FA2203E00809E35 /* DungeonMinimapNode.swift */; };
+		A7E10D062FA2203E00809E35 /* DungeonMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D032FA2203E00809E35 /* DungeonMap.swift */; };
+		A7E10D072FA2203E00809E35 /* PlusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D042FA2203E00809E35 /* PlusNode.swift */; };
+		A7E10D082FA2203E00809E35 /* PentagonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D052FA2203E00809E35 /* PentagonNode.swift */; };
+		A7E10D1A2FB9000100809E35 /* CharacterNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D192FB9000100809E35 /* CharacterNode.swift */; };
 		A6886CF52FA2203E00809E35 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF42FA2203E00809E35 /* GameState.swift */; };
 		A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF62FA2207B00809E35 /* PlayerNode.swift */; };
 		A6886CF92FA2209B00809E35 /* TriangleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF82FA2208B00809E35 /* TriangleNode.swift */; };
@@ -15,15 +24,6 @@
 		A6CDC2562FADDADF0089F83F /* EndScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF32FA21FF500809E37 /* EndScene.swift */; };
 		A6CDC2582FADDBAE0089F83D /* JoystickNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6CDC2572FADDBAE0089F83D /* JoystickNode.swift */; };
 		A6E1A0032FB0000100809E35 /* SquaredNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E1A0042FB0000100809E35 /* SquaredNode.swift */; };
-		A7E10D062FA2203E00809E35 /* DungeonMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D032FA2203E00809E35 /* DungeonMap.swift */; };
-		A7E10D072FA2203E00809E35 /* PlusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D042FA2203E00809E35 /* PlusNode.swift */; };
-		A7E10D082FA2203E00809E35 /* PentagonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D052FA2203E00809E35 /* PentagonNode.swift */; };
-		A7E10D0B2FA2203E00809E35 /* DungeonLayoutMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D092FA2203E00809E35 /* DungeonLayoutMap.swift */; };
-		A7E10D0C2FA2203E00809E35 /* DungeonMinimapNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D0A2FA2203E00809E35 /* DungeonMinimapNode.swift */; };
-		A7E10D0D2FA2203E00809E35 /* DungeonFloorPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D0E2FA2203E00809E35 /* DungeonFloorPlan.swift */; };
-		A7E10D0F2FA2203E00809E35 /* DungeonDoorNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D102FA2203E00809E35 /* DungeonDoorNode.swift */; };
-		A7E10D162FA2203E00809E35 /* DungeonMapPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D172FA2203E00809E35 /* DungeonMapPalette.swift */; };
-		A7E10D1A2FB9000100809E35 /* CharacterNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D192FB9000100809E35 /* CharacterNode.swift */; };
 		BCB6C4C82FB71E0000E715B3 /* BulletNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */; };
 		BCB6C4C92FB9000200E715B3 /* PhysicsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB6C4C82FB9000200E715B3 /* PhysicsCategory.swift */; };
 		BCD0F3332F995AC70067AA84 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD0F3322F995AC70067AA84 /* AppDelegate.swift */; };
@@ -32,17 +32,18 @@
 		BCD0F33E2F995AC70067AA84 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BCD0F33C2F995AC70067AA84 /* Main.storyboard */; };
 		BCD0F3402F995AC80067AA84 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BCD0F33F2F995AC80067AA84 /* Assets.xcassets */; };
 		BCD0F3432F995AC80067AA84 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BCD0F3412F995AC80067AA84 /* LaunchScreen.storyboard */; };
-		DDDDDD1123456789ABCDEF12 /* Game/Dungeon/DungeonGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDDDDD1123456789ABCDEF11 /* Game/Dungeon/DungeonGeometry.swift */; };
-		EEEEEE1123456789ABCDEF12 /* Game/Dungeon/DungeonRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEEEE1123456789ABCDEF11 /* Game/Dungeon/DungeonRenderer.swift */; };
-		EEEEEE2123456789ABCDEF12 /* Game/Controllers/HUDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEEEE2123456789ABCDEF11 /* Game/Controllers/HUDController.swift */; };
-		EEEEEE3123456789ABCDEF12 /* Game/Controllers/CameraController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEEEE3123456789ABCDEF11 /* Game/Controllers/CameraController.swift */; };
-		EEEEEE4123456789ABCDEF12 /* Game/Controllers/InputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEEEE4123456789ABCDEF11 /* Game/Controllers/InputController.swift */; };
-		EEEEEE5123456789ABCDEF12 /* Game/Controllers/CombatController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEEEE5123456789ABCDEF11 /* Game/Controllers/CombatController.swift */; };
-		EEEEEE6123456789ABCDEF12 /* Game/Controllers/DungeonController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEEEE6123456789ABCDEF11 /* Game/Controllers/DungeonController.swift */; };
-		EEEEEE7123456789ABCDEF12 /* Game/Controllers/RunController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEEEEE7123456789ABCDEF11 /* Game/Controllers/RunController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A7E10D172FA2203E00809E35 /* DungeonMapPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonMapPalette.swift; sourceTree = "<group>"; };
+		A7E10D0E2FA2203E00809E35 /* DungeonFloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonFloorPlan.swift; sourceTree = "<group>"; };
+		A7E10D102FA2203E00809E35 /* DungeonDoorNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonDoorNode.swift; sourceTree = "<group>"; };
+		A7E10D092FA2203E00809E35 /* DungeonLayoutMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonLayoutMap.swift; sourceTree = "<group>"; };
+		A7E10D0A2FA2203E00809E35 /* DungeonMinimapNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonMinimapNode.swift; sourceTree = "<group>"; };
+		A7E10D032FA2203E00809E35 /* DungeonMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonMap.swift; sourceTree = "<group>"; };
+		A7E10D042FA2203E00809E35 /* PlusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusNode.swift; sourceTree = "<group>"; };
+		A7E10D052FA2203E00809E35 /* PentagonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PentagonNode.swift; sourceTree = "<group>"; };
+		A7E10D192FB9000100809E35 /* CharacterNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterNode.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E35 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E36 /* MenuScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuScene.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E37 /* EndScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndScene.swift; sourceTree = "<group>"; };
@@ -51,15 +52,6 @@
 		A6886CF82FA2208B00809E35 /* TriangleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriangleNode.swift; sourceTree = "<group>"; };
 		A6CDC2572FADDBAE0089F83D /* JoystickNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoystickNode.swift; sourceTree = "<group>"; };
 		A6E1A0042FB0000100809E35 /* SquaredNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SquaredNode.swift; sourceTree = "<group>"; };
-		A7E10D032FA2203E00809E35 /* DungeonMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonMap.swift; sourceTree = "<group>"; };
-		A7E10D042FA2203E00809E35 /* PlusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusNode.swift; sourceTree = "<group>"; };
-		A7E10D052FA2203E00809E35 /* PentagonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PentagonNode.swift; sourceTree = "<group>"; };
-		A7E10D092FA2203E00809E35 /* DungeonLayoutMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonLayoutMap.swift; sourceTree = "<group>"; };
-		A7E10D0A2FA2203E00809E35 /* DungeonMinimapNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonMinimapNode.swift; sourceTree = "<group>"; };
-		A7E10D0E2FA2203E00809E35 /* DungeonFloorPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonFloorPlan.swift; sourceTree = "<group>"; };
-		A7E10D102FA2203E00809E35 /* DungeonDoorNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonDoorNode.swift; sourceTree = "<group>"; };
-		A7E10D172FA2203E00809E35 /* DungeonMapPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DungeonMapPalette.swift; sourceTree = "<group>"; };
-		A7E10D192FB9000100809E35 /* CharacterNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterNode.swift; sourceTree = "<group>"; };
 		BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulletNode.swift; sourceTree = "<group>"; };
 		BCB6C4C82FB9000200E715B3 /* PhysicsCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhysicsCategory.swift; sourceTree = "<group>"; };
 		BCD0F32F2F995AC70067AA84 /* GeoShot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeoShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -69,14 +61,6 @@
 		BCD0F33D2F995AC70067AA84 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		BCD0F33F2F995AC80067AA84 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BCD0F3422F995AC80067AA84 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		DDDDDD1123456789ABCDEF11 /* Game/Dungeon/DungeonGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Dungeon/DungeonGeometry.swift; sourceTree = "<group>"; };
-		EEEEEE1123456789ABCDEF11 /* Game/Dungeon/DungeonRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Dungeon/DungeonRenderer.swift; sourceTree = "<group>"; };
-		EEEEEE2123456789ABCDEF11 /* Game/Controllers/HUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Controllers/HUDController.swift; sourceTree = "<group>"; };
-		EEEEEE3123456789ABCDEF11 /* Game/Controllers/CameraController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Controllers/CameraController.swift; sourceTree = "<group>"; };
-		EEEEEE4123456789ABCDEF11 /* Game/Controllers/InputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Controllers/InputController.swift; sourceTree = "<group>"; };
-		EEEEEE5123456789ABCDEF11 /* Game/Controllers/CombatController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Controllers/CombatController.swift; sourceTree = "<group>"; };
-		EEEEEE6123456789ABCDEF11 /* Game/Controllers/DungeonController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Controllers/DungeonController.swift; sourceTree = "<group>"; };
-		EEEEEE7123456789ABCDEF11 /* Game/Controllers/RunController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game/Controllers/RunController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,22 +142,14 @@
 			isa = PBXGroup;
 			children = (
 				A6886CF42FA2203E00809E35 /* GameState.swift */,
-				DDDDDD1123456789ABCDEF11 /* Game/Dungeon/DungeonGeometry.swift */,
-				EEEEEE1123456789ABCDEF11 /* Game/Dungeon/DungeonRenderer.swift */,
-				EEEEEE2123456789ABCDEF11 /* Game/Controllers/HUDController.swift */,
-				EEEEEE3123456789ABCDEF11 /* Game/Controllers/CameraController.swift */,
-				EEEEEE4123456789ABCDEF11 /* Game/Controllers/InputController.swift */,
-				EEEEEE5123456789ABCDEF11 /* Game/Controllers/CombatController.swift */,
-				EEEEEE6123456789ABCDEF11 /* Game/Controllers/DungeonController.swift */,
-				EEEEEE7123456789ABCDEF11 /* Game/Controllers/RunController.swift */,
 				A6886CF22FA21FD600809E35 /* Support */,
 				A6886CF12FA21FCF00809E35 /* Models */,
-				A6886CEE2FA21F9400809E35 /* Nodes */,
 				A6886CF02FA21FC500809E35 /* Scenes */,
 				BCD0F3342F995AC70067AA84 /* GameScene.sks */,
 				BCD0F33C2F995AC70067AA84 /* Main.storyboard */,
 				BCD0F33F2F995AC80067AA84 /* Assets.xcassets */,
 				BCD0F3412F995AC80067AA84 /* LaunchScreen.storyboard */,
+				A6886CEE2FA21F9400809E35 /* Nodes */,
 			);
 			path = GeoShot;
 			sourceTree = "<group>";
@@ -271,14 +247,6 @@
 				BCD0F3332F995AC70067AA84 /* AppDelegate.swift in Sources */,
 				A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */,
 				A6E1A0032FB0000100809E35 /* SquaredNode.swift in Sources */,
-				EEEEEE1123456789ABCDEF12 /* Game/Dungeon/DungeonRenderer.swift in Sources */,
-				EEEEEE2123456789ABCDEF12 /* Game/Controllers/HUDController.swift in Sources */,
-				EEEEEE3123456789ABCDEF12 /* Game/Controllers/CameraController.swift in Sources */,
-				EEEEEE4123456789ABCDEF12 /* Game/Controllers/InputController.swift in Sources */,
-				EEEEEE5123456789ABCDEF12 /* Game/Controllers/CombatController.swift in Sources */,
-				EEEEEE6123456789ABCDEF12 /* Game/Controllers/DungeonController.swift in Sources */,
-				EEEEEE7123456789ABCDEF12 /* Game/Controllers/RunController.swift in Sources */,
-				DDDDDD1123456789ABCDEF12 /* Game/Dungeon/DungeonGeometry.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

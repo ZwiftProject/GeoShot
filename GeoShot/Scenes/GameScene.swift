@@ -30,7 +30,7 @@ class GameScene: SKScene {
 
     private var worldNode: SKNode!
     private var mapRoot: SKNode!
-    var gameCamera: SKCameraNode!
+    private var gameCamera: SKCameraNode!
     private var hudNode: SKNode!
     private var viewportSize: CGSize = .zero
     private var currentWorldBounds: CGRect = .zero
@@ -46,17 +46,12 @@ class GameScene: SKScene {
     private var activeCombatZoneId: String?
     private var bossSpawnedThisFloor = false
     private var runCompleted = false
+    private var hpLabel: SKLabelNode?
     private var elapsedTime: TimeInterval = 0
     private var playerInvulnerableTime: TimeInterval = 0
 
-    // Refactor: controllers
-    private var dungeonRenderer: DungeonRenderer!
-    private var hudController: HUDController!
-    private var cameraController: CameraController!
-    private var inputController: InputController!
-    private var combatController: CombatController!
-    private var dungeonController: DungeonController!
-    private var runController: RunController!
+    private var roomProgressLabel: SKLabelNode?
+    private var minimap: DungeonMinimapNode?
 
     override func didMove(to view: SKView) {
         backgroundColor = DungeonMapPalette.worldBackground
@@ -64,18 +59,13 @@ class GameScene: SKScene {
         physicsWorld.contactDelegate = self
         viewportSize = size
         setupCameraAndWorld()
-        // instantiate controllers
-        dungeonRenderer = DungeonRenderer(mapRoot: mapRoot)
-        hudController = HUDController(scene: self, hudRoot: hudNode, viewportSize: viewportSize)
-        joystick = hudController.joystick
-        cameraController = CameraController(scene: self)
-        inputController = InputController(scene: self)
-        combatController = CombatController(scene: self)
-        dungeonController = DungeonController(scene: self)
-        runController = RunController(scene: self)
+        setupRoomProgressLabel()
+        setupHPLabel()
+        setupMinimap()
+        setupJoystick()
         spawnPlayer()
         buildFloor(1)
-        cameraController.snapToPlayer()
+        snapCameraToPlayer()
     }
 
     // MARK: - Setup
@@ -97,6 +87,57 @@ class GameScene: SKScene {
         hudNode = SKNode()
         hudNode.name = "hud"
         gameCamera.addChild(hudNode)
+    }
+
+    private func setupRoomProgressLabel() {
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.fontSize = 14
+        label.alpha = 0.85
+        label.horizontalAlignmentMode = .left
+        label.verticalAlignmentMode = .top
+        label.position = CGPoint(x: -viewportSize.width / 2 + 16, y: viewportSize.height / 2 - 12)
+        label.zPosition = 20
+        label.fontColor = .white
+        hudNode.addChild(label)
+        roomProgressLabel = label
+    }
+
+    private func setupHPLabel() {
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.fontSize = 14
+        label.alpha = 0.85
+        label.horizontalAlignmentMode = .left
+        label.verticalAlignmentMode = .top
+        label.position = CGPoint(x: -viewportSize.width / 2 + 16, y: viewportSize.height / 2 - 32)
+        label.zPosition = 20
+        label.fontColor = .white
+        hudNode.addChild(label)
+        hpLabel = label
+        updateHPLabel()
+    }
+    
+    private func updateHPLabel() {
+        let hearts = String(repeating: "❤️", count: max(0, gameState.hp))
+        let emptyHearts = String(repeating: "🖤", count: max(0, gameState.maxHp - gameState.hp))
+        hpLabel?.text = "HP: \(hearts)\(emptyHearts)"
+    }
+
+    private func setupMinimap() {
+        let side = min(140, max(96, viewportSize.width * 0.2))
+        let panel = CGSize(width: side, height: side)
+        let map = DungeonMinimapNode(mapPixelSize: panel)
+        map.position = CGPoint(
+            x: viewportSize.width / 2 - 12 - panel.width,
+            y: viewportSize.height / 2 - 12 - panel.height
+        )
+        hudNode.addChild(map)
+        minimap = map
+    }
+
+    func setupJoystick() {
+        joystick = JoystickNode()
+        joystick.zPosition = 10
+        hudNode.addChild(joystick)
     }
 
     func spawnPlayer() {
@@ -122,19 +163,19 @@ class GameScene: SKScene {
         passages = DungeonFloorPlan.passages(for: floor)
         currentWorldBounds = DungeonFloorPlan.worldBounds(for: floor)
 
-        // Render map geometry and doors via DungeonRenderer
-        doorNodes = dungeonRenderer.build(zonesById: zonesById, passages: passages, worldBounds: currentWorldBounds)
+        drawMapGeometry()
+        createDoors()
         refreshDoorStates()
 
-        hudController.rebuildMinimap(for: floor)
-        hudController.setClearedRooms(clearedCombatZoneIds)
-        hudController.setHighlightedRoom(id: currentZoneId)
+        minimap?.rebuild(for: floor)
+        minimap?.setClearedRooms(clearedCombatZoneIds)
+        minimap?.setHighlightedRoom(id: currentZoneId)
 
         if let start = zonesById["start"] {
             player.position = CGPoint(x: start.walkBounds.midX, y: start.walkBounds.midY)
         }
         updateHUD()
-        cameraController.snapToPlayer()
+        snapCameraToPlayer()
     }
 
     private func drawMapGeometry() {
@@ -144,7 +185,25 @@ class GameScene: SKScene {
         outer.zPosition = -3
         mapRoot.addChild(outer)
 
-        // Use DungeonGeometry.getSegments for segment calculation
+        func getSegments(start: CGFloat, end: CGFloat, gaps: [(CGFloat, CGFloat)]) -> [(CGFloat, CGFloat)] {
+            var result: [(CGFloat, CGFloat)] = []
+            let sortedGaps = gaps
+                .map { (min($0.0, $0.1), max($0.0, $0.1)) }
+                .filter { $0.1 > start && $0.0 < end }
+                .sorted { $0.0 < $1.0 }
+            
+            var current = start
+            for (gStart, gEnd) in sortedGaps {
+                if gStart > current {
+                    result.append((current, gStart))
+                }
+                current = max(current, gEnd)
+            }
+            if current < end {
+                result.append((current, end))
+            }
+            return result
+        }
 
         func addWallBody(from start: CGPoint, to end: CGPoint) {
             let thickness: CGFloat = max(DungeonMapPalette.roomStrokeWidth + 8, 14)
@@ -244,22 +303,22 @@ class GameScene: SKScene {
                     }
                 }
 
-                for (x1, x2) in DungeonGeometry.getSegments(start: minX, end: maxX, gaps: bottomGaps) {
+                for (x1, x2) in getSegments(start: minX, end: maxX, gaps: bottomGaps) {
                     borderPath.move(to: CGPoint(x: x1, y: minY))
                     borderPath.addLine(to: CGPoint(x: x2, y: minY))
                     addWallBody(from: CGPoint(x: x1, y: minY), to: CGPoint(x: x2, y: minY))
                 }
-                for (x1, x2) in DungeonGeometry.getSegments(start: minX, end: maxX, gaps: topGaps) {
+                for (x1, x2) in getSegments(start: minX, end: maxX, gaps: topGaps) {
                     borderPath.move(to: CGPoint(x: x1, y: maxY))
                     borderPath.addLine(to: CGPoint(x: x2, y: maxY))
                     addWallBody(from: CGPoint(x: x1, y: maxY), to: CGPoint(x: x2, y: maxY))
                 }
-                for (y1, y2) in DungeonGeometry.getSegments(start: minY, end: maxY, gaps: leftGaps) {
+                for (y1, y2) in getSegments(start: minY, end: maxY, gaps: leftGaps) {
                     borderPath.move(to: CGPoint(x: minX, y: y1))
                     borderPath.addLine(to: CGPoint(x: minX, y: y2))
                     addWallBody(from: CGPoint(x: minX, y: y1), to: CGPoint(x: minX, y: y2))
                 }
-                for (y1, y2) in DungeonGeometry.getSegments(start: minY, end: maxY, gaps: rightGaps) {
+                for (y1, y2) in getSegments(start: minY, end: maxY, gaps: rightGaps) {
                     borderPath.move(to: CGPoint(x: maxX, y: y1))
                     borderPath.addLine(to: CGPoint(x: maxX, y: y2))
                     addWallBody(from: CGPoint(x: maxX, y: y1), to: CGPoint(x: maxX, y: y2))
@@ -331,7 +390,7 @@ class GameScene: SKScene {
         guard newZone != previous else { return }
 
         currentZoneId = newZone
-        hudController.setHighlightedRoom(id: newZone)
+        minimap?.setHighlightedRoom(id: newZone)
         updateHUD()
 
         guard let zone = zonesById[newZone] else { return }
@@ -419,7 +478,7 @@ class GameScene: SKScene {
         activeCombatZoneId = nil
         openDoors(forCombatZone: zoneId)
         refreshDoorStates()
-        hudController.setClearedRooms(clearedCombatZoneIds)
+        minimap?.setClearedRooms(clearedCombatZoneIds)
         updateHUD()
     }
 
@@ -439,25 +498,48 @@ class GameScene: SKScene {
         guard let zone = zonesById[currentZoneId] else { return }
         let cleared = clearedCombatZoneIds.count
         let required = DungeonFloorPlan.requiredCombatZoneIds(for: currentFloor).count
-        hudController.updateRoomProgress(
-            floor: currentFloor,
-            zone: zone,
-            clearedCount: cleared,
-            required: required,
-            clearedSet: clearedCombatZoneIds,
-            bossSpawned: bossSpawnedThisFloor,
-            bossCleared: allRequiredCombatCleared()
-        )
+        var suffix = zone.displayTitle
+        if zone.kind == .combat {
+            suffix += clearedCombatZoneIds.contains(zone.id) ? " · Limpa" : " · Combate"
+        } else if zone.kind == .boss {
+            suffix += bossSpawnedThisFloor ? " · Boss" : (allRequiredCombatCleared() ? " · Aberta" : " · Bloqueada")
+        }
+        roomProgressLabel?.text = "Andar \(currentFloor)  \(suffix)  (\(cleared)/\(required))"
     }
 
     // MARK: - Câmara
 
-    func cameraViewportSize() -> CGSize { viewportSize }
-    func cameraWorldBounds() -> CGRect { currentWorldBounds }
-    func cameraFocusPosition() -> CGPoint { player.position }
-    func cameraFollowSmoothingValue() -> CGFloat { cameraFollowSmoothing }
-    func cameraNode() -> SKCameraNode { gameCamera }
-    func setCameraPosition(_ position: CGPoint) { gameCamera.position = position }
+    private func snapCameraToPlayer() {
+        gameCamera.position = clampedCameraPosition(focus: player.position)
+    }
+
+    private func updateCameraFollow(deltaTime: TimeInterval) {
+        let target = clampedCameraPosition(focus: player.position)
+        guard deltaTime > 0 else {
+            gameCamera.position = target
+            return
+        }
+        let t = min(1, cameraFollowSmoothing * CGFloat(deltaTime))
+        gameCamera.position = CGPoint(
+            x: gameCamera.position.x + (target.x - gameCamera.position.x) * t,
+            y: gameCamera.position.y + (target.y - gameCamera.position.y) * t
+        )
+    }
+
+    private func clampedCameraPosition(focus: CGPoint) -> CGPoint {
+        let halfW = viewportSize.width / 2
+        let halfH = viewportSize.height / 2
+        let minX = currentWorldBounds.minX + halfW
+        let maxX = currentWorldBounds.maxX - halfW
+        let minY = currentWorldBounds.minY + halfH
+        let maxY = currentWorldBounds.maxY - halfH
+
+        var x = focus.x
+        var y = focus.y
+        if minX > maxX { x = currentWorldBounds.midX } else { x = min(max(x, minX), maxX) }
+        if minY > maxY { y = currentWorldBounds.midY } else { y = min(max(y, minY), maxY) }
+        return CGPoint(x: x, y: y)
+    }
 
     // MARK: - Combate / entidades
 
@@ -510,15 +592,27 @@ class GameScene: SKScene {
     func isInFireArea(_ p: CGPoint) -> Bool { p.x > viewportSize.width * 0.1 }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        inputController.handleTouchesBegan(touches, with: event)
+        for t in touches {
+            let loc = t.location(in: gameCamera)
+            if joystickTouch == nil && isInJoystickArea(loc) {
+                joystickTouch = t
+                joystick.appear(at: loc)
+            } else if fireTouch == nil && isInFireArea(loc) {
+                fireTouch = t
+            }
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        inputController.handleTouchesMoved(touches, with: event)
+        guard let jt = joystickTouch, touches.contains(jt) else { return }
+        joystick.update(to: jt.location(in: gameCamera))
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        inputController.handleTouchesEnded(touches, with: event)
+        for t in touches {
+            if t == joystickTouch { joystickTouch = nil; joystick.disappear() }
+            if t == fireTouch { fireTouch = nil }
+        }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -554,7 +648,7 @@ class GameScene: SKScene {
             player.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
         }
 
-        cameraController.update(deltaTime: deltaTime)
+        updateCameraFollow(deltaTime: deltaTime)
 
         if let squared = squared, squared.parent != nil {
             squared.move(towards: player.position, deltaTime: deltaTime)
@@ -617,7 +711,7 @@ class GameScene: SKScene {
 
     private func showRunVictory() {
         runCompleted = true
-        // HUDController owns the labels now; keep victory text simple here.
+        roomProgressLabel?.text = "Vitória — dungeon concluída"
         
         let wait = SKAction.wait(forDuration: 1.5)
         let transition = SKAction.run { [weak self] in
@@ -663,7 +757,7 @@ class GameScene: SKScene {
 
         gameState.takeDamage(amount)
         player.setHP(gameState.hp)
-        hudController.updateHP(from: gameState)
+        updateHPLabel()
         
         // Flash red visual effect
         let redFlash = SKAction.sequence([

@@ -364,91 +364,6 @@ class GameScene: SKScene {
         DungeonFloorPlan.zoneId(at: point, floor: currentFloor)
     }
 
-    private func isPointWalkable(_ point: CGPoint) -> Bool {
-        if let locked = activeCombatZoneId {
-            return zonesById[locked]?.walkBounds.contains(point) ?? false
-        }
-        
-        for zone in zonesById.values {
-            if zone.walkBounds.contains(point) {
-                return true
-            }
-        }
-        for passage in passages {
-            guard let door = doorNodes[passage.id], door.isOpen else { continue }
-            if extendedPassageRect(passage).contains(point) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func isBulletPositionWalkable(_ point: CGPoint) -> Bool {
-        for passage in passages {
-            guard let door = doorNodes[passage.id], !door.isOpen else { continue }
-            if passage.rect.contains(point) {
-                return false
-            }
-        }
-        
-        if let locked = activeCombatZoneId {
-            if zonesById[locked]?.floorRect.contains(point) ?? false {
-                return true
-            }
-            for passage in passages {
-                guard let door = doorNodes[passage.id], door.isOpen else { continue }
-                if passage.rect.contains(point) && passage.connects(locked) {
-                    return true
-                }
-            }
-            return false
-        }
-        
-        for zone in zonesById.values {
-            if zone.floorRect.contains(point) {
-                return true
-            }
-        }
-        for passage in passages {
-            if passage.rect.contains(point) {
-                return true
-            }
-        }
-        
-        return false
-    }
-
-    private func isPassageVertical(_ passage: DungeonPassage) -> Bool {
-        guard let zoneA = zonesById[passage.zoneA],
-              let zoneB = zonesById[passage.zoneB] else {
-            return passage.rect.width < passage.rect.height
-        }
-        let dy = abs(zoneA.floorRect.midY - zoneB.floorRect.midY)
-        let dx = abs(zoneA.floorRect.midX - zoneB.floorRect.midX)
-        return dy > dx
-    }
-
-    private func extendedPassageRect(_ passage: DungeonPassage) -> CGRect {
-        let r = passage.rect
-        let isVertical = isPassageVertical(passage)
-        let inset: CGFloat = 12
-        if isVertical {
-            return CGRect(
-                x: r.minX + inset,
-                y: r.minY - 80,
-                width: r.width - 2 * inset,
-                height: r.height + 160
-            )
-        } else {
-            return CGRect(
-                x: r.minX - 80,
-                y: r.minY + inset,
-                width: r.width + 160,
-                height: r.height - 2 * inset
-            )
-        }
-    }
-
     private func handleZoneChange(from previous: String, to newZone: String) {
         guard newZone != previous else { return }
 
@@ -690,37 +605,25 @@ class GameScene: SKScene {
         let deltaTime = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
         lastUpdateTime = currentTime
 
-        if player.gameState.isAlive && !runCompleted {
+        if player.isAlive && !runCompleted {
             elapsedTime = gameState.elapsedTime + deltaTime
             gameState.elapsedTime = elapsedTime
         }
-
-        let previousZone = currentZoneId
-        let previousPosition = player.position
 
         let movementAngle: CGFloat? = joystick.direction != .zero
             ? atan2(joystick.direction.dy, joystick.direction.dx)
             : nil
 
-        if player.gameState.isAlive {
-            // Use physics velocity for player movement. joystick.direction is normalized.
+        if player.isAlive {
             if joystick.direction != .zero {
                 let vx = joystick.direction.dx * player.moveSpeed
                 let vy = joystick.direction.dy * player.moveSpeed
                 player.physicsBody?.velocity = CGVector(dx: vx, dy: vy)
             } else {
-                // No input: let physics damping stop the player, or explicitly zero velocity for snappier stop
                 player.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
             }
         } else {
-            // Player dead: stop movement
             player.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
-        }
-
-        if player.position != previousPosition {
-            if let newZone = zoneId(at: player.position) {
-                handleZoneChange(from: previousZone, to: newZone)
-            }
         }
 
         updateCameraFollow(deltaTime: deltaTime)
@@ -764,18 +667,24 @@ class GameScene: SKScene {
             lastFireTime = currentTime
         }
 
-        for bullet in bullets {
-            bullet.update(deltaTime: deltaTime)
-            if !isBulletPositionWalkable(bullet.position) {
-                bullet.removeFromParent()
-            }
-        }
         bullets.removeAll { $0.isOutside(bounds: currentWorldBounds) }
         bullets.removeAll { $0.parent == nil }
+        enemies.removeAll { $0.parent == nil }
+        if squared?.parent == nil { squared = nil }
+        if plusMiniboss?.parent == nil { plusMiniboss = nil }
+        if pentagonBoss?.parent == nil { pentagonBoss = nil }
 
-        checkBulletEnemyCollisions()
         checkPlayerEnemyCollisions(deltaTime: deltaTime)
         evaluateProgress()
+    }
+
+    override func didSimulatePhysics() {
+        super.didSimulatePhysics()
+
+        guard let player = player, player.isAlive, !runCompleted else { return }
+        if let newZone = zoneId(at: player.position) {
+            handleZoneChange(from: currentZoneId, to: newZone)
+        }
     }
 
     private func showRunVictory() {
@@ -809,20 +718,10 @@ class GameScene: SKScene {
         run(SKAction.sequence([wait, transition]))
     }
 
-    private func checkBulletEnemyCollisions() {
-        // Collision handling now performed by physics contact delegate.
-        // Cleanup arrays: remove bullets and enemies that are no longer in the scene.
-        bullets.removeAll { $0.parent == nil }
-        enemies.removeAll { $0.parent == nil }
-        if squared?.parent == nil { squared = nil }
-        if plusMiniboss?.parent == nil { plusMiniboss = nil }
-        if pentagonBoss?.parent == nil { pentagonBoss = nil }
-    }
-
     private func checkPlayerEnemyCollisions(deltaTime: TimeInterval) {
         // Player-enemy collisions are now handled by physics contact delegate.
         // Update invulnerability blink while invulnerable.
-        guard player.gameState.isAlive && !runCompleted else { return }
+        guard player.isAlive && !runCompleted else { return }
         if playerInvulnerableTime > 0 {
             playerInvulnerableTime -= deltaTime
             let blink = playerInvulnerableTime.truncatingRemainder(dividingBy: 0.15) > 0.07

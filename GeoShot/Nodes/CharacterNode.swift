@@ -57,13 +57,8 @@ class CharacterNode: SKShapeNode {
         let directionX = dx / distance
         let directionY = dy / distance
 
-        // If a physics body exists, set its velocity so physics handles movement and contacts.
         if let body = self.physicsBody {
             body.velocity = CGVector(dx: directionX * moveSpeed, dy: directionY * moveSpeed)
-        } else {
-            // Fallback to manual position updates
-            let distanceToMove = moveSpeed * CGFloat(deltaTime)
-            position = CGPoint(x: position.x + directionX * distanceToMove, y: position.y + directionY * distanceToMove)
         }
     }
 }

@@ -7,15 +7,10 @@
 
 import SpriteKit
 
-final class PentagonNode: SKShapeNode {
+final class PentagonNode: EnemyNode {
 
-    let moveSpeed: CGFloat = 40
-    let maxHp: Int = 30
-    private(set) var hp: Int
-
-    override init() {
-        hp = maxHp
-        super.init()
+    init(gameState: GameState? = nil) {
+        super.init(gameState: gameState, maxHp: 30, moveSpeed: 40)
         setupShape()
     }
 
@@ -44,9 +39,19 @@ final class PentagonNode: SKShapeNode {
         self.strokeColor = .white
         self.lineWidth = 1.5
         self.name = "pentagonBoss"
+
+        // Physics body for contact
+        self.physicsBody = SKPhysicsBody(circleOfRadius: radius + 6)
+        self.physicsBody?.isDynamic = true
+        self.physicsBody?.affectedByGravity = false
+        self.physicsBody?.allowsRotation = false
+        self.physicsBody?.linearDamping = 0.7
+        self.physicsBody?.categoryBitMask = PhysicsCategory.enemy
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.bullet | PhysicsCategory.player
+        self.physicsBody?.collisionBitMask = PhysicsCategory.wall
     }
 
-    func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
+    override func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
         guard hp > 0, deltaTime > 0 else { return }
 
         let dx = targetPosition.x - position.x
@@ -65,12 +70,8 @@ final class PentagonNode: SKShapeNode {
         )
     }
 
-    func takeDamage(_ amount: Int = 1) {
-        guard hp > 0 else { return }
-
-        hp = max(0, hp - amount)
-        if hp == 0 {
-            removeFromParent()
-        }
+    override func die() {
+        super.die()
+        gameState?.addScore(100)
     }
 }

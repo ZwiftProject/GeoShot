@@ -5,17 +5,10 @@
 
 import SpriteKit
 
-class SquaredNode: SKShapeNode {
+class SquaredNode: EnemyNode {
 
-    let moveSpeed: CGFloat
-    let maxHp: Int
-    private(set) var hp: Int
-
-    init(moveSpeed: CGFloat = 100, maxHp: Int = 3) {
-        self.moveSpeed = moveSpeed
-        self.maxHp = maxHp
-        hp = maxHp
-        super.init()
+    init(gameState: GameState? = nil, moveSpeed: CGFloat = 100, maxHp: Int = 3) {
+        super.init(gameState: gameState, maxHp: maxHp, moveSpeed: moveSpeed)
         setupShape()
     }
 
@@ -33,9 +26,19 @@ class SquaredNode: SKShapeNode {
         self.strokeColor = .white
         self.lineWidth = 1.5
         self.name = "squared"
+
+        // Physics body: rectangle matching the visual
+        self.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: side, height: side))
+        self.physicsBody?.isDynamic = true
+        self.physicsBody?.affectedByGravity = false
+        self.physicsBody?.allowsRotation = false
+        self.physicsBody?.linearDamping = 0.8
+        self.physicsBody?.categoryBitMask = PhysicsCategory.enemy
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.bullet | PhysicsCategory.player
+        self.physicsBody?.collisionBitMask = PhysicsCategory.wall
     }
 
-    func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
+    override func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
         guard hp > 0, deltaTime > 0 else { return }
 
         let dx = targetPosition.x - position.x
@@ -54,12 +57,8 @@ class SquaredNode: SKShapeNode {
         )
     }
 
-    func takeDamage(_ amount: Int = 1) {
-        guard hp > 0 else { return }
-
-        hp = max(0, hp - amount)
-        if hp == 0 {
-            removeFromParent()
-        }
+    override func die() {
+        super.die()
+        gameState?.addScore(10)
     }
 }

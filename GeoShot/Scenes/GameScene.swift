@@ -55,6 +55,8 @@ class GameScene: SKScene {
 
     override func didMove(to view: SKView) {
         backgroundColor = DungeonMapPalette.worldBackground
+        physicsWorld.gravity = .zero
+        physicsWorld.contactDelegate = self
         viewportSize = size
         setupCameraAndWorld()
         setupRoomProgressLabel()
@@ -297,6 +299,14 @@ class GameScene: SKScene {
             borderNode.zPosition = -1
             borderNode.strokeColor = DungeonMapPalette.roomStroke
             borderNode.lineWidth = DungeonMapPalette.roomStrokeWidth
+            // Add physics body for walls (edge chain)
+            if !borderPath.isEmpty {
+                borderNode.physicsBody = SKPhysicsBody(edgeChainFrom: borderPath)
+                borderNode.physicsBody?.isDynamic = false
+                borderNode.physicsBody?.categoryBitMask = PhysicsCategory.wall
+                borderNode.physicsBody?.contactTestBitMask = PhysicsCategory.bullet
+                borderNode.physicsBody?.collisionBitMask = 0
+            }
             mapRoot.addChild(borderNode)
         }
     }
@@ -497,7 +507,7 @@ class GameScene: SKScene {
         }
 
         if diff.combatSquaredCount >= 1 {
-            let sq = SquaredNode(moveSpeed: diff.squaredMoveSpeed)
+            let sq = SquaredNode(gameState: gameState, moveSpeed: diff.squaredMoveSpeed)
             sq.position = CGPoint(
                 x: CGFloat.random(in: b.minX...b.maxX),
                 y: CGFloat.random(in: b.minY...b.maxY)
@@ -514,12 +524,12 @@ class GameScene: SKScene {
         let center = CGPoint(x: zone.walkBounds.midX, y: zone.walkBounds.midY + 40)
 
         if currentFloor == 1 {
-            let plus = PlusNode()
+            let plus = PlusNode(gameState: gameState)
             plus.position = center
             worldNode.addChild(plus)
             plusMiniboss = plus
         } else {
-            let boss = PentagonNode()
+            let boss = PentagonNode(gameState: gameState)
             boss.position = center
             worldNode.addChild(boss)
             pentagonBoss = boss
@@ -693,22 +703,18 @@ class GameScene: SKScene {
             : nil
 
         if player.gameState.isAlive {
-            let dx = joystick.direction.dx * player.moveSpeed * CGFloat(deltaTime)
-            let dy = joystick.direction.dy * player.moveSpeed * CGFloat(deltaTime)
-            
-            var newPos = player.position
-            
-            // Deslizamento nas paredes (Sliding)
-            let testX = CGPoint(x: player.position.x + dx, y: player.position.y)
-            if isPointWalkable(testX) {
-                newPos.x = testX.x
+            // Use physics velocity for player movement. joystick.direction is normalized.
+            if joystick.direction != .zero {
+                let vx = joystick.direction.dx * player.moveSpeed
+                let vy = joystick.direction.dy * player.moveSpeed
+                player.physicsBody?.velocity = CGVector(dx: vx, dy: vy)
+            } else {
+                // No input: let physics damping stop the player, or explicitly zero velocity for snappier stop
+                player.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
             }
-            let testY = CGPoint(x: newPos.x, y: player.position.y + dy)
-            if isPointWalkable(testY) {
-                newPos.y = testY.y
-            }
-            
-            player.position = newPos
+        } else {
+            // Player dead: stop movement
+            player.physicsBody?.velocity = CGVector(dx: 0, dy: 0)
         }
 
         if player.position != previousPosition {
@@ -804,122 +810,32 @@ class GameScene: SKScene {
     }
 
     private func checkBulletEnemyCollisions() {
-        var bulletIndicesToRemove = Set<Int>()
-        var enemyIndicesToRemove = Set<Int>()
-
-        for (bulletIndex, bullet) in bullets.enumerated() {
-            guard !bulletIndicesToRemove.contains(bulletIndex) else { continue }
-
-            if let sq = squared, sq.parent != nil, sq.hp > 0 {
-                if hypot(bullet.position.x - sq.position.x, bullet.position.y - sq.position.y) < 24 {
-                    sq.takeDamage(1)
-                    bullet.removeFromParent()
-                    bulletIndicesToRemove.insert(bulletIndex)
-                    gameState.damageDealt += 1
-                    if sq.parent == nil { gameState.score += 10; squared = nil }
-                    player.gameState = gameState
-                    continue
-                }
-            }
-
-            if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
-                if hypot(bullet.position.x - plus.position.x, bullet.position.y - plus.position.y) < 28 {
-                    plus.takeDamage(1)
-                    bullet.removeFromParent()
-                    bulletIndicesToRemove.insert(bulletIndex)
-                    gameState.damageDealt += 1
-                    if plus.parent == nil { gameState.score += 50; plusMiniboss = nil }
-                    player.gameState = gameState
-                    continue
-                }
-            }
-
-            if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
-                if hypot(bullet.position.x - boss.position.x, bullet.position.y - boss.position.y) < 26 {
-                    boss.takeDamage(1)
-                    bullet.removeFromParent()
-                    bulletIndicesToRemove.insert(bulletIndex)
-                    gameState.damageDealt += 1
-                    if boss.parent == nil { gameState.score += 100; pentagonBoss = nil }
-                    player.gameState = gameState
-                    continue
-                }
-            }
-
-            for (enemyIndex, enemy) in enemies.enumerated() {
-                guard !enemyIndicesToRemove.contains(enemyIndex) else { continue }
-                if hypot(bullet.position.x - enemy.position.x, bullet.position.y - enemy.position.y) < 20 {
-                    enemy.removeFromParent()
-                    enemyIndicesToRemove.insert(enemyIndex)
-                    bullet.removeFromParent()
-                    bulletIndicesToRemove.insert(bulletIndex)
-                    gameState.damageDealt += 1
-                    gameState.score += 10
-                    player.gameState = gameState
-                    break
-                }
-            }
-        }
-
-        for index in bulletIndicesToRemove.sorted(by: >) { bullets.remove(at: index) }
-        for index in enemyIndicesToRemove.sorted(by: >) { enemies.remove(at: index) }
+        // Collision handling now performed by physics contact delegate.
+        // Cleanup arrays: remove bullets and enemies that are no longer in the scene.
+        bullets.removeAll { $0.parent == nil }
+        enemies.removeAll { $0.parent == nil }
+        if squared?.parent == nil { squared = nil }
+        if plusMiniboss?.parent == nil { plusMiniboss = nil }
+        if pentagonBoss?.parent == nil { pentagonBoss = nil }
     }
 
     private func checkPlayerEnemyCollisions(deltaTime: TimeInterval) {
+        // Player-enemy collisions are now handled by physics contact delegate.
+        // Update invulnerability blink while invulnerable.
         guard player.gameState.isAlive && !runCompleted else { return }
-        
-        // Update invulnerability time
         if playerInvulnerableTime > 0 {
             playerInvulnerableTime -= deltaTime
-            // Make the player blink while invulnerable
             let blink = playerInvulnerableTime.truncatingRemainder(dividingBy: 0.15) > 0.07
             player.alpha = blink ? 0.3 : 1.0
-            
-            if playerInvulnerableTime <= 0 {
-                player.alpha = 1.0
-            }
-            return
-        }
-        
-        var hit = false
-        
-        if let sq = squared, sq.parent != nil, sq.hp > 0 {
-            if hypot(player.position.x - sq.position.x, player.position.y - sq.position.y) < 20 {
-                hit = true
-            }
-        }
-        
-        if !hit, let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 {
-            if hypot(player.position.x - plus.position.x, player.position.y - plus.position.y) < 24 {
-                hit = true
-            }
-        }
-        
-        if !hit, let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 {
-            if hypot(player.position.x - boss.position.x, player.position.y - boss.position.y) < 26 {
-                hit = true
-            }
-        }
-        
-        if !hit {
-            for enemy in enemies where enemy.parent != nil {
-                if hypot(player.position.x - enemy.position.x, player.position.y - enemy.position.y) < 18 {
-                    hit = true
-                    break
-                }
-            }
-        }
-        
-        if hit {
-            playerTakeDamage(1)
+            if playerInvulnerableTime <= 0 { player.alpha = 1.0 }
         }
     }
     
     private func playerTakeDamage(_ amount: Int) {
         guard gameState.isAlive else { return }
-        
-        gameState.hp = max(0, gameState.hp - amount)
-        player.gameState = gameState
+
+        gameState.takeDamage(amount)
+        player.hp = gameState.hp
         updateHPLabel()
         
         // Flash red visual effect
@@ -969,8 +885,40 @@ class GameScene: SKScene {
             targetIndicator?.lineWidth = 2
             targetIndicator?.fillColor = .clear
             targetIndicator?.zPosition = 1
-            worldNode.addChild(targetIndicator!)
+            if let t = targetIndicator { worldNode.addChild(t) }
         }
         targetIndicator?.position = position
+    }
+}
+
+// MARK: - Physics contact handling
+extension GameScene: SKPhysicsContactDelegate {
+    func didBegin(_ contact: SKPhysicsContact) {
+        let a = contact.bodyA
+        let b = contact.bodyB
+        let mask = a.categoryBitMask | b.categoryBitMask
+
+        switch mask {
+        case PhysicsCategory.bullet | PhysicsCategory.enemy:
+            let bulletBody = a.categoryBitMask == PhysicsCategory.bullet ? a : b
+            let enemyBody = a.categoryBitMask == PhysicsCategory.enemy ? a : b
+            if let bulletNode = bulletBody.node as? SKNode { bulletNode.removeFromParent() }
+            if let enemyNode = enemyBody.node as? EnemyNode {
+                enemyNode.takeDamage(1)
+                gameState.addDamage(1)
+            }
+
+        case PhysicsCategory.bullet | PhysicsCategory.wall:
+            // Remove bullet on wall hit
+            if a.categoryBitMask == PhysicsCategory.bullet { a.node?.removeFromParent() }
+            if b.categoryBitMask == PhysicsCategory.bullet { b.node?.removeFromParent() }
+
+        case PhysicsCategory.player | PhysicsCategory.enemy:
+            // Player hit by enemy
+            playerTakeDamage(1)
+
+        default:
+            break
+        }
     }
 }

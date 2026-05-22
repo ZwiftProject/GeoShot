@@ -255,13 +255,14 @@ class MenuButtonNode: SKNode {
         }
         
         run(SKAction.group([scaleBack, colorReset])) { [weak self] in
+            guard let self = self else { return }
             guard let touch = touches.first else { return }
-            let location = touch.location(in: self!)
+            let location = touch.location(in: self)
             // Check if touch ended inside button bounds
-            let halfW = self!.buttonSize.width / 2
-            let halfH = self!.buttonSize.height / 2
+            let halfW = self.buttonSize.width / 2
+            let halfH = self.buttonSize.height / 2
             if location.x >= -halfW && location.x <= halfW && location.y >= -halfH && location.y <= halfH {
-                self?.action()
+                self.action()
             }
         }
     }

@@ -7,15 +7,10 @@
 
 import SpriteKit
 
-final class PlusNode: SKShapeNode {
+final class PlusNode: EnemyNode {
 
-    let moveSpeed: CGFloat = 55
-    let maxHp: Int = 12
-    private(set) var hp: Int
-
-    override init() {
-        hp = maxHp
-        super.init()
+    init(gameState: GameState? = nil) {
+        super.init(gameState: gameState, maxHp: 12, moveSpeed: 55)
         setupShape()
     }
 
@@ -35,9 +30,19 @@ final class PlusNode: SKShapeNode {
         self.strokeColor = .white
         self.lineWidth = 1.5
         self.name = "plusMiniboss"
+
+        // Physics body for contact
+        self.physicsBody = SKPhysicsBody(circleOfRadius: 26)
+        self.physicsBody?.isDynamic = true
+        self.physicsBody?.affectedByGravity = false
+        self.physicsBody?.allowsRotation = false
+        self.physicsBody?.linearDamping = 0.6
+        self.physicsBody?.categoryBitMask = PhysicsCategory.enemy
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.bullet | PhysicsCategory.player
+        self.physicsBody?.collisionBitMask = PhysicsCategory.wall
     }
 
-    func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
+    override func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
         guard hp > 0, deltaTime > 0 else { return }
 
         let dx = targetPosition.x - position.x
@@ -56,12 +61,8 @@ final class PlusNode: SKShapeNode {
         )
     }
 
-    func takeDamage(_ amount: Int = 1) {
-        guard hp > 0 else { return }
-
-        hp = max(0, hp - amount)
-        if hp == 0 {
-            removeFromParent()
-        }
+    override func die() {
+        super.die()
+        gameState?.addScore(50)
     }
 }

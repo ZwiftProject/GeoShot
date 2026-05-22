@@ -22,6 +22,14 @@ class BulletNode: SKShapeNode {
         self.velocity = direction
         self.name = "bullet"
         self.zPosition = 0
+        self.physicsBody = SKPhysicsBody(circleOfRadius: 3)
+        self.physicsBody?.isDynamic = true
+        self.physicsBody?.affectedByGravity = false
+        self.physicsBody?.usesPreciseCollisionDetection = true
+        self.physicsBody?.categoryBitMask = PhysicsCategory.bullet
+        self.physicsBody?.contactTestBitMask = PhysicsCategory.enemy | PhysicsCategory.wall
+        self.physicsBody?.collisionBitMask = 0
+        self.physicsBody?.velocity = CGVector(dx: direction.dx * bulletSpeed, dy: direction.dy * bulletSpeed)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -30,9 +38,14 @@ class BulletNode: SKShapeNode {
     
     /// Atualiza a posição da bala baseada na velocidade e tempo decorrido
     func update(deltaTime: TimeInterval) {
-        let dx = velocity.dx * bulletSpeed * CGFloat(deltaTime)
-        let dy = velocity.dy * bulletSpeed * CGFloat(deltaTime)
-        position = CGPoint(x: position.x + dx, y: position.y + dy)
+        // Bullet movement is handled by physics body velocity. Ensure fallback if physicsBody missing.
+        if let body = physicsBody {
+            // nothing to do; physics updates position
+        } else {
+            let dx = velocity.dx * bulletSpeed * CGFloat(deltaTime)
+            let dy = velocity.dy * bulletSpeed * CGFloat(deltaTime)
+            position = CGPoint(x: position.x + dx, y: position.y + dy)
+        }
     }
     
     /// Verifica se a bala saiu dos limites do mundo da sala.

@@ -305,7 +305,7 @@ class GameScene: SKScene {
                 borderNode.physicsBody?.isDynamic = false
                 borderNode.physicsBody?.categoryBitMask = PhysicsCategory.wall
                 borderNode.physicsBody?.contactTestBitMask = PhysicsCategory.bullet
-                borderNode.physicsBody?.collisionBitMask = 0
+                borderNode.physicsBody?.collisionBitMask = PhysicsCategory.player | PhysicsCategory.enemy
             }
             mapRoot.addChild(borderNode)
         }

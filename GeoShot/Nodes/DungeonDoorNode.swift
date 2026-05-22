@@ -89,7 +89,7 @@ final class DungeonDoorNode: SKShapeNode {
                 self.physicsBody?.isDynamic = false
                 self.physicsBody?.categoryBitMask = PhysicsCategory.wall
                 self.physicsBody?.contactTestBitMask = PhysicsCategory.bullet
-                self.physicsBody?.collisionBitMask = 0
+                self.physicsBody?.collisionBitMask = PhysicsCategory.player | PhysicsCategory.enemy
             }
             if animated {
                 alpha = 0

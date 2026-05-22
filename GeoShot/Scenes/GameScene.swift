@@ -255,13 +255,17 @@ class GameScene: SKScene {
                 if isVertical {
                     borderPath.move(to: CGPoint(x: rect.minX, y: rect.minY))
                     borderPath.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+                    addWallBody(from: CGPoint(x: rect.minX, y: rect.minY), to: CGPoint(x: rect.minX, y: rect.maxY))
                     borderPath.move(to: CGPoint(x: rect.maxX, y: rect.minY))
                     borderPath.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+                    addWallBody(from: CGPoint(x: rect.maxX, y: rect.minY), to: CGPoint(x: rect.maxX, y: rect.maxY))
                 } else {
                     borderPath.move(to: CGPoint(x: rect.minX, y: rect.minY))
                     borderPath.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+                    addWallBody(from: CGPoint(x: rect.minX, y: rect.minY), to: CGPoint(x: rect.maxX, y: rect.minY))
                     borderPath.move(to: CGPoint(x: rect.minX, y: rect.maxY))
                     borderPath.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+                    addWallBody(from: CGPoint(x: rect.minX, y: rect.maxY), to: CGPoint(x: rect.maxX, y: rect.maxY))
                 }
             } else {
                 // Desenhar as bordas da sala com aberturas (gaps) onde houver passagens

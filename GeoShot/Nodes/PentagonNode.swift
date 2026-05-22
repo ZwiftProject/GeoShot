@@ -54,6 +54,9 @@ final class PentagonNode: EnemyNode {
     override func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
         guard hp > 0, deltaTime > 0 else { return }
 
+        // Rotate slowly
+        self.zRotation += CGFloat(deltaTime) * 0.4
+
         let dx = targetPosition.x - position.x
         let dy = targetPosition.y - position.y
         let distance = sqrt(dx * dx + dy * dy)
@@ -68,6 +71,44 @@ final class PentagonNode: EnemyNode {
             x: position.x + directionX * distanceToMove,
             y: position.y + directionY * distanceToMove
         )
+    }
+
+    private var timeSinceLastShot: TimeInterval = 0
+    private var currentAttackAngle: CGFloat = 0
+    private let fireInterval: TimeInterval = 0.6
+
+    override func updateAttack(targetPosition: CGPoint, deltaTime: TimeInterval) -> [EnemyBulletNode] {
+        guard hp > 0 else { return [] }
+        timeSinceLastShot += deltaTime
+        if timeSinceLastShot >= fireInterval {
+            timeSinceLastShot = 0
+            
+            currentAttackAngle += 0.2
+            if currentAttackAngle > CGFloat.pi * 2 {
+                currentAttackAngle -= CGFloat.pi * 2
+            }
+            
+            var bullets: [EnemyBulletNode] = []
+            let color = SKColor(red: 1, green: 0.55, blue: 0.1, alpha: 1)
+            let bulletCount = 5
+            let angleStep = CGFloat.pi * 2 / CGFloat(bulletCount)
+            
+            for i in 0..<bulletCount {
+                let angle = currentAttackAngle + CGFloat(i) * angleStep
+                let dir = CGVector(dx: cos(angle), dy: sin(angle))
+                let bullet = EnemyBulletNode(
+                    position: self.position,
+                    direction: dir,
+                    color: color,
+                    radius: 4.5,
+                    speed: 220,
+                    damage: 1
+                )
+                bullets.append(bullet)
+            }
+            return bullets
+        }
+        return []
     }
 
     override func die() {

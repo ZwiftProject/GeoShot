@@ -75,4 +75,10 @@ class EnemyNode: CharacterNode {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) not implemented")
     }
+
+    /// Update function called on every frame to let shooting enemies generate projectiles.
+    /// Returns any newly fired bullet nodes to be added to the scene.
+    func updateAttack(targetPosition: CGPoint, deltaTime: TimeInterval) -> [EnemyBulletNode] {
+        return []
+    }
 }

@@ -45,6 +45,9 @@ final class PlusNode: EnemyNode {
     override func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
         guard hp > 0, deltaTime > 0 else { return }
 
+        // Rotate continuously
+        self.zRotation += CGFloat(deltaTime) * 1.5
+
         let dx = targetPosition.x - position.x
         let dy = targetPosition.y - position.y
         let distance = sqrt(dx * dx + dy * dy)
@@ -59,6 +62,36 @@ final class PlusNode: EnemyNode {
             x: position.x + directionX * distanceToMove,
             y: position.y + directionY * distanceToMove
         )
+    }
+
+    private var timeSinceLastShot: TimeInterval = 0
+    private let fireInterval: TimeInterval = 2.5
+
+    override func updateAttack(targetPosition: CGPoint, deltaTime: TimeInterval) -> [EnemyBulletNode] {
+        guard hp > 0 else { return [] }
+        timeSinceLastShot += deltaTime
+        if timeSinceLastShot >= fireInterval {
+            timeSinceLastShot = 0
+            
+            var bullets: [EnemyBulletNode] = []
+            let color = SKColor(red: 0.85, green: 0.2, blue: 0.9, alpha: 1)
+            
+            for i in 0..<4 {
+                let angle = self.zRotation + CGFloat(i) * CGFloat.pi / 2
+                let dir = CGVector(dx: cos(angle), dy: sin(angle))
+                let bullet = EnemyBulletNode(
+                    position: self.position,
+                    direction: dir,
+                    color: color,
+                    radius: 5,
+                    speed: 200,
+                    damage: 1
+                )
+                bullets.append(bullet)
+            }
+            return bullets
+        }
+        return []
     }
 
     override func die() {

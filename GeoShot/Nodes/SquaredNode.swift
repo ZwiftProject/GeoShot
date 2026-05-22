@@ -57,6 +57,34 @@ class SquaredNode: EnemyNode {
         )
     }
 
+    private var timeSinceLastShot: TimeInterval = 0
+    private let fireInterval: TimeInterval = 2.0
+
+    override func updateAttack(targetPosition: CGPoint, deltaTime: TimeInterval) -> [EnemyBulletNode] {
+        guard hp > 0 else { return [] }
+        timeSinceLastShot += deltaTime
+        if timeSinceLastShot >= fireInterval {
+            timeSinceLastShot = 0
+            
+            let dx = targetPosition.x - position.x
+            let dy = targetPosition.y - position.y
+            let dist = sqrt(dx * dx + dy * dy)
+            guard dist > 0 else { return [] }
+            
+            let dir = CGVector(dx: dx / dist, dy: dy / dist)
+            let bullet = EnemyBulletNode(
+                position: self.position,
+                direction: dir,
+                color: .red,
+                radius: 6,
+                speed: 180,
+                damage: 1
+            )
+            return [bullet]
+        }
+        return []
+    }
+
     override func die() {
         super.die()
         gameState?.addScore(10)

@@ -18,6 +18,7 @@ class GameScene: SKScene {
     var plusMiniboss: PlusNode?
     var pentagonBoss: PentagonNode?
     var bullets: [BulletNode] = []
+    var enemyBullets: [EnemyBulletNode] = []
 
     var joystickTouch: UITouch?
     var fireTouch: UITouch?
@@ -554,6 +555,8 @@ class GameScene: SKScene {
         pentagonBoss = nil
         for b in bullets where b.parent != nil { b.removeFromParent() }
         bullets.removeAll()
+        for eb in enemyBullets where eb.parent != nil { eb.removeFromParent() }
+        enemyBullets.removeAll()
         targetIndicator?.removeFromParent()
         targetIndicator = nil
     }
@@ -652,12 +655,33 @@ class GameScene: SKScene {
 
         if let squared = squared, squared.parent != nil {
             squared.move(towards: player.position, deltaTime: deltaTime)
+            if player.isAlive && !runCompleted {
+                let newBullets = squared.updateAttack(targetPosition: player.position, deltaTime: deltaTime)
+                for b in newBullets {
+                    worldNode.addChild(b)
+                    enemyBullets.append(b)
+                }
+            }
         }
         if let plus = plusMiniboss, plus.parent != nil {
             plus.move(towards: player.position, deltaTime: deltaTime)
+            if player.isAlive && !runCompleted {
+                let newBullets = plus.updateAttack(targetPosition: player.position, deltaTime: deltaTime)
+                for b in newBullets {
+                    worldNode.addChild(b)
+                    enemyBullets.append(b)
+                }
+            }
         }
         if let boss = pentagonBoss, boss.parent != nil {
             boss.move(towards: player.position, deltaTime: deltaTime)
+            if player.isAlive && !runCompleted {
+                let newBullets = boss.updateAttack(targetPosition: player.position, deltaTime: deltaTime)
+                for b in newBullets {
+                    worldNode.addChild(b)
+                    enemyBullets.append(b)
+                }
+            }
         }
         for enemy in enemies where enemy.parent != nil {
             enemy.move(towards: player.position, deltaTime: deltaTime)
@@ -689,8 +713,24 @@ class GameScene: SKScene {
             lastFireTime = currentTime
         }
 
-        bullets.removeAll { $0.isOutside(bounds: currentWorldBounds) }
+        bullets.removeAll { bullet in
+            if bullet.isOutside(bounds: currentWorldBounds) {
+                bullet.removeFromParent()
+                return true
+            }
+            return false
+        }
         bullets.removeAll { $0.parent == nil }
+
+        enemyBullets.removeAll { bullet in
+            if bullet.isOutside(bounds: currentWorldBounds) {
+                bullet.removeFromParent()
+                return true
+            }
+            return false
+        }
+        enemyBullets.removeAll { $0.parent == nil }
+
         enemies.removeAll { $0.parent == nil }
         if squared?.parent == nil { squared = nil }
         if plusMiniboss?.parent == nil { plusMiniboss = nil }
@@ -753,7 +793,7 @@ class GameScene: SKScene {
     }
     
     private func playerTakeDamage(_ amount: Int) {
-        guard gameState.isAlive else { return }
+        guard gameState.isAlive && playerInvulnerableTime <= 0 else { return }
 
         gameState.takeDamage(amount)
         player.setHP(gameState.hp)
@@ -833,6 +873,17 @@ extension GameScene: SKPhysicsContactDelegate {
             // Remove bullet on wall hit
             if a.categoryBitMask == PhysicsCategory.bullet { a.node?.removeFromParent() }
             if b.categoryBitMask == PhysicsCategory.bullet { b.node?.removeFromParent() }
+
+        case PhysicsCategory.enemyBullet | PhysicsCategory.player:
+            let bulletBody = a.categoryBitMask == PhysicsCategory.enemyBullet ? a : b
+            if let bulletNode = bulletBody.node as? EnemyBulletNode {
+                playerTakeDamage(bulletNode.damage)
+                bulletNode.removeFromParent()
+            }
+
+        case PhysicsCategory.enemyBullet | PhysicsCategory.wall:
+            if a.categoryBitMask == PhysicsCategory.enemyBullet { a.node?.removeFromParent() }
+            if b.categoryBitMask == PhysicsCategory.enemyBullet { b.node?.removeFromParent() }
 
         case PhysicsCategory.player | PhysicsCategory.enemy:
             // Player hit by enemy

@@ -205,6 +205,28 @@ class GameScene: SKScene {
             return result
         }
 
+        func addWallBody(from start: CGPoint, to end: CGPoint) {
+            let thickness: CGFloat = max(DungeonMapPalette.roomStrokeWidth + 8, 14)
+            let wallNode = SKNode()
+            wallNode.zPosition = -1
+
+            if abs(start.y - end.y) < 0.5 {
+                let width = abs(end.x - start.x) + thickness
+                wallNode.position = CGPoint(x: (start.x + end.x) / 2, y: start.y)
+                wallNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: width, height: thickness))
+            } else {
+                let height = abs(end.y - start.y) + thickness
+                wallNode.position = CGPoint(x: start.x, y: (start.y + end.y) / 2)
+                wallNode.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: thickness, height: height))
+            }
+
+            wallNode.physicsBody?.isDynamic = false
+            wallNode.physicsBody?.categoryBitMask = PhysicsCategory.wall
+            wallNode.physicsBody?.contactTestBitMask = PhysicsCategory.bullet
+            wallNode.physicsBody?.collisionBitMask = PhysicsCategory.player | PhysicsCategory.enemy
+            mapRoot.addChild(wallNode)
+        }
+
         for zone in zonesById.values.sorted(by: { $0.floorRect.minY > $1.floorRect.minY }) {
             // 1. Desenhar o chão da zona (sem borda)
             let floor = SKShapeNode(rect: zone.floorRect)
@@ -280,18 +302,22 @@ class GameScene: SKScene {
                 for (x1, x2) in getSegments(start: minX, end: maxX, gaps: bottomGaps) {
                     borderPath.move(to: CGPoint(x: x1, y: minY))
                     borderPath.addLine(to: CGPoint(x: x2, y: minY))
+                    addWallBody(from: CGPoint(x: x1, y: minY), to: CGPoint(x: x2, y: minY))
                 }
                 for (x1, x2) in getSegments(start: minX, end: maxX, gaps: topGaps) {
                     borderPath.move(to: CGPoint(x: x1, y: maxY))
                     borderPath.addLine(to: CGPoint(x: x2, y: maxY))
+                    addWallBody(from: CGPoint(x: x1, y: maxY), to: CGPoint(x: x2, y: maxY))
                 }
                 for (y1, y2) in getSegments(start: minY, end: maxY, gaps: leftGaps) {
                     borderPath.move(to: CGPoint(x: minX, y: y1))
                     borderPath.addLine(to: CGPoint(x: minX, y: y2))
+                    addWallBody(from: CGPoint(x: minX, y: y1), to: CGPoint(x: minX, y: y2))
                 }
                 for (y1, y2) in getSegments(start: minY, end: maxY, gaps: rightGaps) {
                     borderPath.move(to: CGPoint(x: maxX, y: y1))
                     borderPath.addLine(to: CGPoint(x: maxX, y: y2))
+                    addWallBody(from: CGPoint(x: maxX, y: y1), to: CGPoint(x: maxX, y: y2))
                 }
             }
 
@@ -299,14 +325,6 @@ class GameScene: SKScene {
             borderNode.zPosition = -1
             borderNode.strokeColor = DungeonMapPalette.roomStroke
             borderNode.lineWidth = DungeonMapPalette.roomStrokeWidth
-            // Add physics body for walls (edge chain)
-            if !borderPath.isEmpty {
-                borderNode.physicsBody = SKPhysicsBody(edgeChainFrom: borderPath)
-                borderNode.physicsBody?.isDynamic = false
-                borderNode.physicsBody?.categoryBitMask = PhysicsCategory.wall
-                borderNode.physicsBody?.contactTestBitMask = PhysicsCategory.bullet
-                borderNode.physicsBody?.collisionBitMask = PhysicsCategory.player | PhysicsCategory.enemy
-            }
             mapRoot.addChild(borderNode)
         }
     }

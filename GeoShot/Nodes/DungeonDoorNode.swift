@@ -83,9 +83,10 @@ final class DungeonDoorNode: SKShapeNode {
             fillColor = .clear // Sem porta física sólida
             strokeColor = DungeonMapPalette.roomStroke
             lineWidth = DungeonMapPalette.roomStrokeWidth
-            // Create physics body from the current path so bullets detect the closed door
-            if let p = self.path, !p.isEmpty {
-                self.physicsBody = SKPhysicsBody(edgeChainFrom: p)
+            let p = CGRect(x: 0, y: 0, width: 0, height: 0)
+            if let path = self.path, !path.isEmpty {
+                let bounds = path.boundingBoxOfPath
+                self.physicsBody = SKPhysicsBody(rectangleOf: bounds.size, center: CGPoint(x: bounds.midX, y: bounds.midY))
                 self.physicsBody?.isDynamic = false
                 self.physicsBody?.categoryBitMask = PhysicsCategory.wall
                 self.physicsBody?.contactTestBitMask = PhysicsCategory.bullet

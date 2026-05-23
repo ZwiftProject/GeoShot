@@ -16,6 +16,7 @@
 		A7E10D072FA2203E00809E35 /* PlusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D042FA2203E00809E35 /* PlusNode.swift */; };
 		A7E10D082FA2203E00809E35 /* PentagonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D052FA2203E00809E35 /* PentagonNode.swift */; };
 		A7E10D1A2FB9000100809E35 /* CharacterNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D192FB9000100809E35 /* CharacterNode.swift */; };
+		A7E10D1B2FB9000100809E35 /* EnemyBulletNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E10D1C2FB9000100809E35 /* EnemyBulletNode.swift */; };
 		A6886CF52FA2203E00809E35 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF42FA2203E00809E35 /* GameState.swift */; };
 		A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF62FA2207B00809E35 /* PlayerNode.swift */; };
 		A6886CF92FA2209B00809E35 /* TriangleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6886CF82FA2208B00809E35 /* TriangleNode.swift */; };
@@ -44,6 +45,7 @@
 		A7E10D042FA2203E00809E35 /* PlusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusNode.swift; sourceTree = "<group>"; };
 		A7E10D052FA2203E00809E35 /* PentagonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PentagonNode.swift; sourceTree = "<group>"; };
 		A7E10D192FB9000100809E35 /* CharacterNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterNode.swift; sourceTree = "<group>"; };
+		A7E10D1C2FB9000100809E35 /* EnemyBulletNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnemyBulletNode.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E35 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E36 /* MenuScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuScene.swift; sourceTree = "<group>"; };
 		A6886CF32FA21FF500809E37 /* EndScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndScene.swift; sourceTree = "<group>"; };
@@ -84,6 +86,7 @@
 				A6E1A0042FB0000100809E35 /* SquaredNode.swift */,
 				A7E10D042FA2203E00809E35 /* PlusNode.swift */,
 				A7E10D052FA2203E00809E35 /* PentagonNode.swift */,
+				A7E10D1C2FB9000100809E35 /* EnemyBulletNode.swift */,
 				A7E10D0A2FA2203E00809E35 /* DungeonMinimapNode.swift */,
 				A7E10D102FA2203E00809E35 /* DungeonDoorNode.swift */,
 				BCB6C4C72FB71E0000E715B3 /* BulletNode.swift */,
@@ -244,6 +247,7 @@
 				A6CDC2582FADDBAE0089F83D /* JoystickNode.swift in Sources */,
 				A6886CF92FA2209B00809E35 /* TriangleNode.swift in Sources */,
 				A7E10D1A2FB9000100809E35 /* CharacterNode.swift in Sources */,
+				A7E10D1B2FB9000100809E35 /* EnemyBulletNode.swift in Sources */,
 				BCD0F3332F995AC70067AA84 /* AppDelegate.swift in Sources */,
 				A6886CF72FA2207B00809E35 /* PlayerNode.swift in Sources */,
 				A6E1A0032FB0000100809E35 /* SquaredNode.swift in Sources */,

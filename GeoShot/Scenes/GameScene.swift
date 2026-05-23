@@ -303,7 +303,7 @@ class GameScene: SKScene {
     }
 
     private func updateUpgradesUI() {
-        guard let container = upgradesContainerNode else { return }
+        guard let container = upgradesContainerNode else { return } 
         guard gameState.upgrades.count != lastUpgradesCount else { return }
         lastUpgradesCount = gameState.upgrades.count
         container.removeAllChildren()

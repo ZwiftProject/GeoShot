@@ -83,7 +83,6 @@ final class DungeonDoorNode: SKShapeNode {
             fillColor = .clear // Sem porta física sólida
             strokeColor = DungeonMapPalette.roomStroke
             lineWidth = DungeonMapPalette.roomStrokeWidth
-            let p = CGRect(x: 0, y: 0, width: 0, height: 0)
             if let path = self.path, !path.isEmpty {
                 let bounds = path.boundingBoxOfPath
                 self.physicsBody = SKPhysicsBody(rectangleOf: bounds.size, center: CGPoint(x: bounds.midX, y: bounds.midY))

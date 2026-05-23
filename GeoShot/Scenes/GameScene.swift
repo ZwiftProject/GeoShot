@@ -54,6 +54,9 @@ class GameScene: SKScene {
     private var roomProgressLabel: SKLabelNode?
     private var minimap: DungeonMinimapNode?
 
+    private var currentShakeIntensity: CGFloat = 0
+    private var shakeDecay: CGFloat = 0
+
     override func didMove(to view: SKView) {
         backgroundColor = DungeonMapPalette.worldBackground
         physicsWorld.gravity = .zero
@@ -516,15 +519,115 @@ class GameScene: SKScene {
 
     private func updateCameraFollow(deltaTime: TimeInterval) {
         let target = clampedCameraPosition(focus: player.position)
-        guard deltaTime > 0 else {
-            gameCamera.position = target
-            return
+        
+        var basePosition = gameCamera.position
+        if deltaTime > 0 {
+            let t = min(1, cameraFollowSmoothing * CGFloat(deltaTime))
+            basePosition = CGPoint(
+                x: gameCamera.position.x + (target.x - gameCamera.position.x) * t,
+                y: gameCamera.position.y + (target.y - gameCamera.position.y) * t
+            )
+        } else {
+            basePosition = target
         }
-        let t = min(1, cameraFollowSmoothing * CGFloat(deltaTime))
-        gameCamera.position = CGPoint(
-            x: gameCamera.position.x + (target.x - gameCamera.position.x) * t,
-            y: gameCamera.position.y + (target.y - gameCamera.position.y) * t
-        )
+        
+        if currentShakeIntensity > 0 {
+            let shakeX = CGFloat.random(in: -currentShakeIntensity...currentShakeIntensity)
+            let shakeY = CGFloat.random(in: -currentShakeIntensity...currentShakeIntensity)
+            gameCamera.position = CGPoint(x: basePosition.x + shakeX, y: basePosition.y + shakeY)
+            
+            currentShakeIntensity -= shakeDecay * CGFloat(deltaTime)
+            if currentShakeIntensity < 0 {
+                currentShakeIntensity = 0
+            }
+        } else {
+            gameCamera.position = basePosition
+        }
+    }
+
+    private func triggerScreenShake(intensity: CGFloat, duration: TimeInterval) {
+        currentShakeIntensity = intensity
+        if duration > 0 {
+            shakeDecay = intensity / CGFloat(duration)
+        } else {
+            shakeDecay = intensity
+        }
+    }
+
+    private func spawnGeometricExplosion(at position: CGPoint, color: SKColor, shapeType: String) {
+        let particleCount = 12
+        for _ in 0..<particleCount {
+            let particle = SKShapeNode()
+            let path = CGMutablePath()
+            
+            switch shapeType {
+            case "enemy", "triangle":
+                path.move(to: CGPoint(x: 0, y: 6))
+                path.addLine(to: CGPoint(x: -5, y: -3))
+                path.addLine(to: CGPoint(x: 5, y: -3))
+                path.closeSubpath()
+            case "squared", "square":
+                let side: CGFloat = 8
+                path.addRect(CGRect(x: -side / 2, y: -side / 2, width: side, height: side))
+            case "plusMiniboss", "plus":
+                let thick: CGFloat = 3
+                let span: CGFloat = 9
+                path.addRect(CGRect(x: -thick / 2, y: -span / 2, width: thick, height: span))
+                path.addRect(CGRect(x: -span / 2, y: -thick / 2, width: span, height: thick))
+            case "pentagonBoss", "pentagon":
+                let radius: CGFloat = 6
+                let startAngle = CGFloat.pi / 2 + CGFloat.pi / 5
+                for i in 0..<5 {
+                    let angle = startAngle + CGFloat(i) * 2 * CGFloat.pi / 5
+                    let x = radius * cos(angle)
+                    let y = radius * sin(angle)
+                    if i == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+                path.closeSubpath()
+            case "player", "kite":
+                path.move(to: CGPoint(x: 0, y: 4))
+                path.addLine(to: CGPoint(x: 8, y: 0))
+                path.addLine(to: CGPoint(x: 0, y: -4))
+                path.addLine(to: CGPoint(x: -4, y: 0))
+                path.closeSubpath()
+            default:
+                path.addEllipse(in: CGRect(x: -3, y: -3, width: 6, height: 6))
+            }
+            
+            particle.path = path
+            particle.fillColor = color
+            particle.strokeColor = .white
+            particle.lineWidth = 1.0
+            particle.position = position
+            particle.zPosition = 5
+            
+            worldNode.addChild(particle)
+            
+            let angle = CGFloat.random(in: 0...(CGFloat.pi * 2))
+            let distance = CGFloat.random(in: 40...90)
+            let duration = Double.random(in: 0.4...0.7)
+            
+            let moveDest = CGPoint(
+                x: position.x + cos(angle) * distance,
+                y: position.y + sin(angle) * distance
+            )
+            
+            let moveAction = SKAction.move(to: moveDest, duration: duration)
+            moveAction.timingMode = .easeOut
+            
+            let rotateAction = SKAction.rotate(byAngle: CGFloat.random(in: -CGFloat.pi * 2...CGFloat.pi * 2), duration: duration)
+            let fadeOutAction = SKAction.fadeOut(withDuration: duration)
+            let scaleAction = SKAction.scale(to: 0.1, duration: duration)
+            
+            let group = SKAction.group([moveAction, rotateAction, fadeOutAction, scaleAction])
+            let sequence = SKAction.sequence([group, SKAction.removeFromParent()])
+            
+            particle.run(sequence)
+        }
     }
 
     private func clampedCameraPosition(focus: CGPoint) -> CGPoint {
@@ -809,10 +912,14 @@ class GameScene: SKScene {
         
         playerInvulnerableTime = 1.2 // 1.2 seconds of invulnerability
         
+        // Shake screen on damage
+        triggerScreenShake(intensity: 15.0, duration: 0.35)
+        
         if gameState.hp <= 0 {
             // Player death!
             let explosion = SKAction.run { [weak self] in
                 guard let self = self else { return }
+                self.spawnGeometricExplosion(at: self.player.position, color: .cyan, shapeType: "player")
                 self.player.removeFromParent()
                 // Show game over end screen
                 self.showGameOver()
@@ -865,8 +972,20 @@ extension GameScene: SKPhysicsContactDelegate {
             let enemyBody = a.categoryBitMask == PhysicsCategory.enemy ? a : b
             if let bulletNode = bulletBody.node as? SKNode { bulletNode.removeFromParent() }
             if let enemyNode = enemyBody.node as? EnemyNode {
+                let wasAlive = enemyNode.isAlive
+                let name = enemyNode.name ?? "enemy"
+                let pos = enemyNode.position
+                let color = enemyNode.fillColor
+                
                 enemyNode.takeDamage(1)
                 gameState.addDamage(1)
+                
+                if wasAlive && !enemyNode.isAlive {
+                    spawnGeometricExplosion(at: pos, color: color, shapeType: name)
+                    let shakeIntensity: CGFloat = (name == "plusMiniboss" || name == "pentagonBoss") ? 12 : 3
+                    let shakeDuration: TimeInterval = (name == "plusMiniboss" || name == "pentagonBoss") ? 0.4 : 0.15
+                    triggerScreenShake(intensity: shakeIntensity, duration: shakeDuration)
+                }
             }
 
         case PhysicsCategory.bullet | PhysicsCategory.wall:

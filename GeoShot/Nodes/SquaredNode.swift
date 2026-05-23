@@ -6,9 +6,13 @@
 import SpriteKit
 
 class SquaredNode: EnemyNode {
+    private let scoreValue: Int
 
-    init(gameState: GameState? = nil, moveSpeed: CGFloat = 100, maxHp: Int = 3) {
-        super.init(gameState: gameState, maxHp: maxHp, moveSpeed: moveSpeed)
+    init(gameState: GameState? = nil, moveSpeed: CGFloat = 100, maxHp: Int = 3, difficulty: Int = 1) {
+        let scaledHp = Int(ceil(Double(maxHp) * (1.0 + Double(difficulty) * 0.25)))
+        let scaledSpeed = moveSpeed * (1.0 + CGFloat(difficulty) * 0.04)
+        self.scoreValue = Int((10.0 * (1.0 + Double(difficulty) * 0.30)).rounded())
+        super.init(gameState: gameState, maxHp: scaledHp, moveSpeed: scaledSpeed)
         setupShape()
     }
 
@@ -69,6 +73,6 @@ class SquaredNode: EnemyNode {
 
     override func die() {
         super.die()
-        gameState?.addScore(10)
+        gameState?.addScore(scoreValue)
     }
 }

@@ -12,9 +12,13 @@
 import SpriteKit
 
 class TriangleNode: EnemyNode {
+    private let scoreValue: Int
 
-    init(gameState: GameState, moveSpeed: CGFloat = 10) {
-        super.init(gameState: gameState, maxHp: 1, moveSpeed: moveSpeed)
+    init(gameState: GameState, moveSpeed: CGFloat = 10, difficulty: Int = 1) {
+        let scaledHp = Int(ceil(1.0 * (1.0 + Double(difficulty) * 0.25)))
+        let scaledSpeed = moveSpeed * (1.0 + CGFloat(difficulty) * 0.04)
+        self.scoreValue = Int((10.0 * (1.0 + Double(difficulty) * 0.30)).rounded())
+        super.init(gameState: gameState, maxHp: scaledHp, moveSpeed: scaledSpeed)
         setupShape()
     }
 
@@ -51,6 +55,6 @@ class TriangleNode: EnemyNode {
 
     override func die() {
         super.die()
-        gameState?.addScore(10)
+        gameState?.addScore(scoreValue)
     }
 }

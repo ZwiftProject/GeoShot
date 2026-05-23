@@ -22,6 +22,16 @@ struct DungeonZone: Equatable {
     let kind: ZoneKind
     let floorRect: CGRect
     let wallInset: CGFloat
+    let difficulty: Int
+
+    init(id: String, displayTitle: String, kind: ZoneKind, floorRect: CGRect, wallInset: CGFloat, difficulty: Int = 1) {
+        self.id = id
+        self.displayTitle = displayTitle
+        self.kind = kind
+        self.floorRect = floorRect
+        self.wallInset = wallInset
+        self.difficulty = difficulty
+    }
 
     var walkBounds: CGRect {
         floorRect.insetBy(dx: wallInset, dy: wallInset)
@@ -76,7 +86,8 @@ enum DungeonFloorPlan {
             displayTitle: z.displayTitle,
             kind: z.kind,
             floorRect: sc(z.floorRect),
-            wallInset: z.kind == .corridor ? 12 : 22
+            wallInset: z.kind == .corridor ? 12 : 22,
+            difficulty: z.difficulty
         )
     }
 
@@ -92,15 +103,15 @@ enum DungeonFloorPlan {
         DungeonZone(id: "corr_start_midWest", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 212, y: 1020, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "midWest", displayTitle: "Sala Oeste", kind: .combat,
-                    floorRect: CGRect(x: 80, y: 800, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 80, y: 800, width: 320, height: 220), wallInset: 28, difficulty: 1),
         DungeonZone(id: "corr_midWest_centerHub", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 400, y: 882, width: 200, height: 56), wallInset: 12),
         DungeonZone(id: "centerHub", displayTitle: "Sala Central", kind: .combat,
-                    floorRect: CGRect(x: 600, y: 800, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 600, y: 800, width: 320, height: 220), wallInset: 28, difficulty: 2),
         DungeonZone(id: "corr_centerHub_north", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 732, y: 1020, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "north", displayTitle: "Sala Norte", kind: .combat,
-                    floorRect: CGRect(x: 600, y: 1300, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 600, y: 1300, width: 320, height: 220), wallInset: 28, difficulty: 3),
         DungeonZone(id: "corr_centerHub_bossHub", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 920, y: 882, width: 200, height: 56), wallInset: 12),
         DungeonZone(id: "bossHub", displayTitle: "Salão do Chefe", kind: .boss,
@@ -139,25 +150,25 @@ enum DungeonFloorPlan {
         DungeonZone(id: "corr_start_midWest", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 212, y: 1020, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "midWest", displayTitle: "Sala Oeste", kind: .combat,
-                    floorRect: CGRect(x: 80, y: 800, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 80, y: 800, width: 320, height: 220), wallInset: 28, difficulty: 3),
         DungeonZone(id: "corr_midWest_southWest", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 212, y: 520, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "southWest", displayTitle: "Sala Sudoeste", kind: .combat,
-                    floorRect: CGRect(x: 80, y: 300, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 80, y: 300, width: 320, height: 220), wallInset: 28, difficulty: 4),
         DungeonZone(id: "corr_southWest_south", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 400, y: 382, width: 200, height: 56), wallInset: 12),
         DungeonZone(id: "south", displayTitle: "Sala Sul", kind: .combat,
-                    floorRect: CGRect(x: 600, y: 300, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 600, y: 300, width: 320, height: 220), wallInset: 28, difficulty: 4),
         DungeonZone(id: "corr_midWest_centerHub", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 400, y: 882, width: 200, height: 56), wallInset: 12),
         DungeonZone(id: "corr_south_centerHub", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 732, y: 520, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "centerHub", displayTitle: "Sala Central", kind: .combat,
-                    floorRect: CGRect(x: 600, y: 800, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 600, y: 800, width: 320, height: 220), wallInset: 28, difficulty: 5),
         DungeonZone(id: "corr_centerHub_north", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 732, y: 1020, width: 56, height: 280), wallInset: 12),
         DungeonZone(id: "north", displayTitle: "Sala Norte", kind: .combat,
-                    floorRect: CGRect(x: 600, y: 1300, width: 320, height: 220), wallInset: 28),
+                    floorRect: CGRect(x: 600, y: 1300, width: 320, height: 220), wallInset: 28, difficulty: 5),
         DungeonZone(id: "corr_centerHub_bossHub", displayTitle: "Corredor", kind: .corridor,
                     floorRect: CGRect(x: 920, y: 882, width: 200, height: 56), wallInset: 12),
         DungeonZone(id: "bossHub", displayTitle: "Salão do Chefe", kind: .boss,

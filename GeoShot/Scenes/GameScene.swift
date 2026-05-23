@@ -639,7 +639,7 @@ class GameScene: SKScene {
         let b = zone.walkBounds.insetBy(dx: 36, dy: 36)
 
         for _ in 0..<diff.combatTriangleCount {
-            let enemy = TriangleNode(gameState: gameState, moveSpeed: diff.triangleMoveSpeed)
+            let enemy = TriangleNode(gameState: gameState, moveSpeed: diff.triangleMoveSpeed, difficulty: zone.difficulty)
             enemy.position = CGPoint(
                 x: CGFloat.random(in: b.minX...b.maxX),
                 y: CGFloat.random(in: b.minY...b.maxY)
@@ -649,7 +649,7 @@ class GameScene: SKScene {
         }
 
         if diff.combatSquaredCount >= 1 {
-            let sq = SquaredNode(gameState: gameState, moveSpeed: diff.squaredMoveSpeed)
+            let sq = SquaredNode(gameState: gameState, moveSpeed: diff.squaredMoveSpeed, difficulty: zone.difficulty)
             sq.position = CGPoint(
                 x: CGFloat.random(in: b.minX...b.maxX),
                 y: CGFloat.random(in: b.minY...b.maxY)
@@ -1023,8 +1023,7 @@ class GameScene: SKScene {
             let damageUpgradeCount = gameState.upgrades.filter { $0 == .damage }.count
             let bulletDamage = 1 + damageUpgradeCount
             
-            let piercingUpgradeCount = gameState.upgrades.filter { $0 == .piercing }.count
-            let isPiercing = piercingUpgradeCount > 0
+            let isPiercing = gameState.upgrades.contains { $0 == .piercing }
             
             let extraBulletUpgradeCount = gameState.upgrades.filter { $0 == .extraBullet }.count
             let bulletCount = 1 + extraBulletUpgradeCount * 2

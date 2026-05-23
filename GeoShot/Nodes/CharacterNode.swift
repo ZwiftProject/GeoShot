@@ -8,7 +8,7 @@ import SpriteKit
 /// Base class for all characters (player and enemies).
 class CharacterNode: SKShapeNode {
     private(set) var hp: Int
-    let maxHp: Int
+    var maxHp: Int
     let moveSpeed: CGFloat
 
     var isAlive: Bool { hp > 0 }

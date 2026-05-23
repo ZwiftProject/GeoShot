@@ -48,6 +48,12 @@ class GameScene: SKScene {
     private var bossSpawnedThisFloor = false
     private var runCompleted = false
     private var hpLabel: SKLabelNode?
+    private var hpContainerNode: SKNode?
+    private var timerLabel: SKLabelNode?
+    private var scoreLabel: SKLabelNode?
+    private var scoreIconNode: SKShapeNode?
+    private var upgradesContainerNode: SKNode?
+    private var lastUpgradesCount = -1
     private var elapsedTime: TimeInterval = 0
     private var playerInvulnerableTime: TimeInterval = 0
 
@@ -65,7 +71,10 @@ class GameScene: SKScene {
         setupCameraAndWorld()
         setupRoomProgressLabel()
         setupHPLabel()
+        setupTimerLabel()
+        setupScoreLabel()
         setupMinimap()
+        setupUpgradesContainer()
         setupJoystick()
         spawnPlayer()
         buildFloor(1)
@@ -111,19 +120,98 @@ class GameScene: SKScene {
         label.fontSize = 14
         label.alpha = 0.85
         label.horizontalAlignmentMode = .left
-        label.verticalAlignmentMode = .top
-        label.position = CGPoint(x: -viewportSize.width / 2 + 16, y: viewportSize.height / 2 - 32)
+        label.verticalAlignmentMode = .center
+        label.position = CGPoint(x: -viewportSize.width / 2 + 16, y: viewportSize.height / 2 - 38)
         label.zPosition = 20
         label.fontColor = .white
+        label.text = "HP"
         hudNode.addChild(label)
         hpLabel = label
+        
+        let container = SKNode()
+        container.zPosition = 20
+        hudNode.addChild(container)
+        hpContainerNode = container
+        
         updateHPLabel()
     }
     
     private func updateHPLabel() {
-        let hearts = String(repeating: "❤️", count: max(0, gameState.hp))
-        let emptyHearts = String(repeating: "🖤", count: max(0, gameState.maxHp - gameState.hp))
-        hpLabel?.text = "HP: \(hearts)\(emptyHearts)"
+        hpContainerNode?.removeAllChildren()
+        guard let hpContainer = hpContainerNode else { return }
+        
+        let totalHearts = (gameState.maxHp + 1) / 2
+        let startX = -viewportSize.width / 2 + 48
+        let yPos = viewportSize.height / 2 - 38
+        
+        for i in 0..<totalHearts {
+            let heartHpIndex = i * 2
+            let state: HeartState
+            if gameState.hp >= heartHpIndex + 2 {
+                state = .full
+            } else if gameState.hp == heartHpIndex + 1 {
+                state = .half
+            } else {
+                state = .empty
+            }
+            
+            let heart = createHeartNode(state: state)
+            heart.position = CGPoint(x: startX + CGFloat(i) * 20, y: yPos)
+            hpContainer.addChild(heart)
+        }
+    }
+    
+    private func createHeartNode(state: HeartState) -> SKNode {
+        let container = SKNode()
+        
+        let leftPath = CGMutablePath()
+        leftPath.move(to: CGPoint(x: 0, y: -7))
+        leftPath.addLine(to: CGPoint(x: -7, y: 0))
+        leftPath.addLine(to: CGPoint(x: -7, y: 4))
+        leftPath.addLine(to: CGPoint(x: -4, y: 7))
+        leftPath.addLine(to: CGPoint(x: 0, y: 3))
+        leftPath.closeSubpath()
+        
+        let rightPath = CGMutablePath()
+        rightPath.move(to: CGPoint(x: 0, y: -7))
+        rightPath.addLine(to: CGPoint(x: 7, y: 0))
+        rightPath.addLine(to: CGPoint(x: 7, y: 4))
+        rightPath.addLine(to: CGPoint(x: 4, y: 7))
+        rightPath.addLine(to: CGPoint(x: 0, y: 3))
+        rightPath.closeSubpath()
+        
+        let leftHalf = SKShapeNode(path: leftPath)
+        let rightHalf = SKShapeNode(path: rightPath)
+        
+        let fillColor = SKColor(red: 1.0, green: 0.25, blue: 0.35, alpha: 1.0)
+        let emptyColor = SKColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 0.6)
+        let strokeColor = SKColor.white
+        let emptyStrokeColor = SKColor.white.withAlphaComponent(0.3)
+        
+        leftHalf.lineWidth = 1.0
+        rightHalf.lineWidth = 1.0
+        
+        switch state {
+        case .full:
+            leftHalf.fillColor = fillColor
+            leftHalf.strokeColor = strokeColor
+            rightHalf.fillColor = fillColor
+            rightHalf.strokeColor = strokeColor
+        case .half:
+            leftHalf.fillColor = fillColor
+            leftHalf.strokeColor = strokeColor
+            rightHalf.fillColor = emptyColor
+            rightHalf.strokeColor = emptyStrokeColor
+        case .empty:
+            leftHalf.fillColor = emptyColor
+            leftHalf.strokeColor = emptyStrokeColor
+            rightHalf.fillColor = emptyColor
+            rightHalf.strokeColor = emptyStrokeColor
+        }
+        
+        container.addChild(leftHalf)
+        container.addChild(rightHalf)
+        return container
     }
 
     private func setupMinimap() {
@@ -136,6 +224,116 @@ class GameScene: SKScene {
         )
         hudNode.addChild(map)
         minimap = map
+    }
+
+    private func setupTimerLabel() {
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.fontSize = 14
+        label.alpha = 0.9
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode = .top
+        label.position = CGPoint(x: 0, y: viewportSize.height / 2 - 12)
+        label.zPosition = 20
+        label.fontColor = .white
+        label.text = "00:00.00"
+        hudNode.addChild(label)
+        timerLabel = label
+    }
+
+    private func updateTimerLabel() {
+        let minutes = Int(elapsedTime) / 60
+        let seconds = Int(elapsedTime) % 60
+        let centiseconds = Int((elapsedTime.truncatingRemainder(dividingBy: 1.0)) * 100)
+        timerLabel?.text = String(format: "%02d:%02d.%02d", minutes, seconds, centiseconds)
+    }
+
+    private func setupScoreLabel() {
+        let yPos = viewportSize.height / 2 - 62
+        
+        let icon = SKShapeNode(path: createHexagonPath(radius: 6))
+        icon.fillColor = SKColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 1.0)
+        icon.strokeColor = .white
+        icon.lineWidth = 1.0
+        icon.position = CGPoint(x: -viewportSize.width / 2 + 22, y: yPos)
+        icon.zPosition = 20
+        hudNode.addChild(icon)
+        scoreIconNode = icon
+        
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.fontSize = 14
+        label.alpha = 0.85
+        label.horizontalAlignmentMode = .left
+        label.verticalAlignmentMode = .center
+        label.position = CGPoint(x: -viewportSize.width / 2 + 36, y: yPos)
+        label.zPosition = 20
+        label.fontColor = .white
+        label.text = "0000"
+        hudNode.addChild(label)
+        scoreLabel = label
+        
+        updateScoreLabel()
+    }
+
+    private func createHexagonPath(radius: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        for i in 0..<6 {
+            let angle = CGFloat(i) * CGFloat.pi / 3
+            let x = radius * cos(angle)
+            let y = radius * sin(angle)
+            if i == 0 {
+                path.move(to: CGPoint(x: x, y: y))
+            } else {
+                path.addLine(to: CGPoint(x: x, y: y))
+            }
+        }
+        path.closeSubpath()
+        return path
+    }
+
+    private func updateScoreLabel() {
+        scoreLabel?.text = String(format: "%04d", gameState.score)
+    }
+
+    private func setupUpgradesContainer() {
+        let container = SKNode()
+        container.zPosition = 20
+        hudNode.addChild(container)
+        upgradesContainerNode = container
+        updateUpgradesUI()
+    }
+
+    private func updateUpgradesUI() {
+        guard let container = upgradesContainerNode else { return }
+        guard gameState.upgrades.count != lastUpgradesCount else { return }
+        lastUpgradesCount = gameState.upgrades.count
+        container.removeAllChildren()
+        
+        let side = min(140, max(96, viewportSize.width * 0.2))
+        let startY = viewportSize.height / 2 - 12 - side - 20
+        let startX = viewportSize.width / 2 - 16
+        
+        for (index, upgrade) in gameState.upgrades.enumerated() {
+            let slotSize: CGFloat = 26
+            let spacing: CGFloat = 6
+            let xPos = startX - (slotSize / 2) - CGFloat(index) * (slotSize + spacing)
+            
+            let slot = SKShapeNode(rectOf: CGSize(width: slotSize, height: slotSize), cornerRadius: 4)
+            slot.fillColor = SKColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 0.9)
+            slot.strokeColor = upgrade.color
+            slot.lineWidth = 1.5
+            slot.position = CGPoint(x: xPos, y: startY)
+            
+            let label = SKLabelNode(fontNamed: "Menlo-Bold")
+            label.text = upgrade.shortName
+            label.fontSize = 8
+            label.fontColor = .white
+            label.horizontalAlignmentMode = .center
+            label.verticalAlignmentMode = .center
+            label.position = CGPoint(x: 0, y: 0)
+            
+            slot.addChild(label)
+            container.addChild(slot)
+        }
     }
 
     func setupJoystick() {
@@ -736,6 +934,9 @@ class GameScene: SKScene {
         if player.isAlive && !runCompleted {
             elapsedTime = gameState.elapsedTime + deltaTime
             gameState.elapsedTime = elapsedTime
+            updateTimerLabel()
+            updateScoreLabel()
+            updateUpgradesUI()
         }
 
         let movementAngle: CGFloat? = joystick.direction != .zero
@@ -899,6 +1100,7 @@ class GameScene: SKScene {
         guard gameState.isAlive && playerInvulnerableTime <= 0 else { return }
 
         gameState.takeDamage(amount)
+        player.maxHp = gameState.maxHp
         player.setHP(gameState.hp)
         updateHPLabel()
         
@@ -1012,4 +1214,10 @@ extension GameScene: SKPhysicsContactDelegate {
             break
         }
     }
+}
+
+enum HeartState {
+    case full
+    case half
+    case empty
 }

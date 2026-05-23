@@ -65,12 +65,10 @@ final class PentagonNode: EnemyNode {
 
         let directionX = dx / distance
         let directionY = dy / distance
-        let distanceToMove = moveSpeed * CGFloat(deltaTime)
 
-        position = CGPoint(
-            x: position.x + directionX * distanceToMove,
-            y: position.y + directionY * distanceToMove
-        )
+        if let body = self.physicsBody {
+            body.velocity = CGVector(dx: directionX * moveSpeed, dy: directionY * moveSpeed)
+        }
     }
 
     private var timeSinceLastShot: TimeInterval = 0

@@ -85,7 +85,10 @@ final class DungeonDoorNode: SKShapeNode {
             lineWidth = DungeonMapPalette.roomStrokeWidth
             if let path = self.path, !path.isEmpty {
                 let bounds = path.boundingBoxOfPath
-                self.physicsBody = SKPhysicsBody(rectangleOf: bounds.size, center: CGPoint(x: bounds.midX, y: bounds.midY))
+                let thickness: CGFloat = 16.0
+                let w = max(bounds.size.width, thickness)
+                let h = max(bounds.size.height, thickness)
+                self.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: w, height: h), center: CGPoint(x: bounds.midX, y: bounds.midY))
                 self.physicsBody?.isDynamic = false
                 self.physicsBody?.categoryBitMask = PhysicsCategory.wall
                 self.physicsBody?.contactTestBitMask = PhysicsCategory.bullet

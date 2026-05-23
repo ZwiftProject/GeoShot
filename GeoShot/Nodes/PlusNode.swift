@@ -92,12 +92,10 @@ final class PlusNode: EnemyNode {
         
         // Movimentação mais rápida no estado de fúria
         let currentSpeed = isFrenzy ? moveSpeed * 1.45 : moveSpeed
-        let distanceToMove = currentSpeed * CGFloat(deltaTime)
 
-        position = CGPoint(
-            x: position.x + directionX * distanceToMove,
-            y: position.y + directionY * distanceToMove
-        )
+        if let body = self.physicsBody {
+            body.velocity = CGVector(dx: directionX * currentSpeed, dy: directionY * currentSpeed)
+        }
     }
 
     private var timeSinceLastShot: TimeInterval = 0

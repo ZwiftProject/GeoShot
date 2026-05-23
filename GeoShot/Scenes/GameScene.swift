@@ -13,10 +13,7 @@ class GameScene: SKScene {
     var player: PlayerNode!
     var joystick: JoystickNode!
 
-    var enemies: [TriangleNode] = []
-    var squared: SquaredNode?
-    var plusMiniboss: PlusNode?
-    var pentagonBoss: PentagonNode?
+    var enemies: [EnemyNode] = []
     var bullets: [BulletNode] = []
     var enemyBullets: [EnemyBulletNode] = []
 
@@ -658,7 +655,7 @@ class GameScene: SKScene {
                 y: CGFloat.random(in: b.minY...b.maxY)
             )
             worldNode.addChild(sq)
-            squared = sq
+            enemies.append(sq)
         }
     }
 
@@ -666,18 +663,20 @@ class GameScene: SKScene {
         guard !bossSpawnedThisFloor, zone.kind == .boss else { return }
         bossSpawnedThisFloor = true
 
+        closeDoors(forCombatZone: zone.id)
+
         let center = CGPoint(x: zone.walkBounds.midX, y: zone.walkBounds.midY + 40)
 
         if currentFloor == 1 {
             let plus = PlusNode(gameState: gameState)
             plus.position = center
             worldNode.addChild(plus)
-            plusMiniboss = plus
+            enemies.append(plus)
         } else {
             let boss = PentagonNode(gameState: gameState)
             boss.position = center
             worldNode.addChild(boss)
-            pentagonBoss = boss
+            enemies.append(boss)
         }
     }
 
@@ -855,12 +854,6 @@ class GameScene: SKScene {
     private func clearCombatEntities() {
         for e in enemies where e.parent != nil { e.removeFromParent() }
         enemies.removeAll()
-        squared?.removeFromParent()
-        squared = nil
-        plusMiniboss?.removeFromParent()
-        plusMiniboss = nil
-        pentagonBoss?.removeFromParent()
-        pentagonBoss = nil
         for b in bullets where b.parent != nil { b.removeFromParent() }
         bullets.removeAll()
         for eb in enemyBullets where eb.parent != nil { eb.removeFromParent() }
@@ -870,19 +863,11 @@ class GameScene: SKScene {
     }
 
     private func isCombatClearInActiveZone() -> Bool {
-        if enemies.contains(where: { $0.parent != nil }) { return false }
-        if let sq = squared, sq.parent != nil, sq.hp > 0 { return false }
-        return true
+        return !enemies.contains { $0.parent != nil && $0.hp > 0 }
     }
 
     private func isBossDead() -> Bool {
-        if let plus = plusMiniboss {
-            return plus.parent == nil || plus.hp <= 0
-        }
-        if let boss = pentagonBoss {
-            return boss.parent == nil || boss.hp <= 0
-        }
-        return false
+        return !enemies.contains { ($0.name == "plusMiniboss" || $0.name == "pentagonBoss") && $0.hp > 0 }
     }
 
     private func evaluateProgress() {
@@ -955,13 +940,11 @@ class GameScene: SKScene {
         if isShowingUpgradeSelection {
             player.physicsBody?.velocity = .zero
             for enemy in enemies { enemy.physicsBody?.velocity = .zero }
-            squared?.physicsBody?.velocity = .zero
-            plusMiniboss?.physicsBody?.velocity = .zero
-            pentagonBoss?.physicsBody?.velocity = .zero
             return
         }
 
-        let deltaTime = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
+        let rawDelta = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
+        let deltaTime = min(rawDelta, 0.1)
         lastUpdateTime = currentTime
 
         if player.isAlive && !runCompleted {
@@ -1005,38 +988,15 @@ class GameScene: SKScene {
 
         updateCameraFollow(deltaTime: deltaTime)
 
-        if let squared = squared, squared.parent != nil {
-            squared.move(towards: player.position, deltaTime: deltaTime)
-            if player.isAlive && !runCompleted {
-                let newBullets = squared.updateAttack(targetPosition: player.position, deltaTime: deltaTime)
-                for b in newBullets {
-                    worldNode.addChild(b)
-                    enemyBullets.append(b)
-                }
-            }
-        }
-        if let plus = plusMiniboss, plus.parent != nil {
-            plus.move(towards: player.position, deltaTime: deltaTime)
-            if player.isAlive && !runCompleted {
-                let newBullets = plus.updateAttack(targetPosition: player.position, deltaTime: deltaTime)
-                for b in newBullets {
-                    worldNode.addChild(b)
-                    enemyBullets.append(b)
-                }
-            }
-        }
-        if let boss = pentagonBoss, boss.parent != nil {
-            boss.move(towards: player.position, deltaTime: deltaTime)
-            if player.isAlive && !runCompleted {
-                let newBullets = boss.updateAttack(targetPosition: player.position, deltaTime: deltaTime)
-                for b in newBullets {
-                    worldNode.addChild(b)
-                    enemyBullets.append(b)
-                }
-            }
-        }
         for enemy in enemies where enemy.parent != nil {
             enemy.move(towards: player.position, deltaTime: deltaTime)
+            if player.isAlive && !runCompleted {
+                let newBullets = enemy.updateAttack(targetPosition: player.position, deltaTime: deltaTime)
+                for b in newBullets {
+                    worldNode.addChild(b)
+                    enemyBullets.append(b)
+                }
+            }
         }
 
         if let target = findClosestTarget(to: player) {
@@ -1056,6 +1016,7 @@ class GameScene: SKScene {
             if let movementAngle = movementAngle {
                 player.zRotation = movementAngle
             }
+            player.fireDirection = CGVector(dx: cos(player.zRotation), dy: sin(player.zRotation))
         }
 
         if isFiring && currentTime - lastFireTime >= currentFireInterval {
@@ -1066,7 +1027,7 @@ class GameScene: SKScene {
             let isPiercing = piercingUpgradeCount > 0
             
             let extraBulletUpgradeCount = gameState.upgrades.filter { $0 == .extraBullet }.count
-            let bulletCount = 1 + extraBulletUpgradeCount
+            let bulletCount = 1 + extraBulletUpgradeCount * 2
             
             let baseAngle = atan2(player.fireDirection.dy, player.fireDirection.dx)
             let spreadAngle: CGFloat = 0.2 // ~11.5 degrees spread angle between bullets
@@ -1102,9 +1063,6 @@ class GameScene: SKScene {
         enemyBullets.removeAll { $0.parent == nil }
 
         enemies.removeAll { $0.parent == nil }
-        if squared?.parent == nil { squared = nil }
-        if plusMiniboss?.parent == nil { plusMiniboss = nil }
-        if pentagonBoss?.parent == nil { pentagonBoss = nil }
 
         checkPlayerEnemyCollisions(deltaTime: deltaTime)
         evaluateProgress()
@@ -1201,16 +1159,10 @@ class GameScene: SKScene {
         var closest: SKNode?
         var closestDistance = CGFloat.greatestFiniteMagnitude
 
-        func consider(_ node: SKNode?, alive: Bool) {
-            guard let node = node, alive else { return }
-            let d = hypot(node.position.x - player.position.x, node.position.y - player.position.y)
-            if d < closestDistance { closestDistance = d; closest = node }
+        for enemy in enemies where enemy.parent != nil && enemy.hp > 0 {
+            let d = hypot(enemy.position.x - player.position.x, enemy.position.y - player.position.y)
+            if d < closestDistance { closestDistance = d; closest = enemy }
         }
-
-        if let sq = squared, sq.parent != nil, sq.hp > 0 { consider(sq, alive: true) }
-        if let plus = plusMiniboss, plus.parent != nil, plus.hp > 0 { consider(plus, alive: true) }
-        if let boss = pentagonBoss, boss.parent != nil, boss.hp > 0 { consider(boss, alive: true) }
-        for enemy in enemies where enemy.parent != nil { consider(enemy, alive: true) }
 
         return closest
     }

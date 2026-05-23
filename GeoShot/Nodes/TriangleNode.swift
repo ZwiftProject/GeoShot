@@ -48,24 +48,6 @@ class TriangleNode: EnemyNode {
         self.physicsBody?.collisionBitMask = PhysicsCategory.wall
     }
 
-    override func move(towards targetPosition: CGPoint, deltaTime: TimeInterval) {
-        guard hp > 0, deltaTime > 0 else { return }
-
-        let dx = targetPosition.x - position.x
-        let dy = targetPosition.y - position.y
-        let distance = sqrt(dx * dx + dy * dy)
-
-        guard distance > 0 else { return }
-
-        let directionX = dx / distance
-        let directionY = dy / distance
-        let distanceToMove = moveSpeed * CGFloat(deltaTime)
-
-        position = CGPoint(
-            x: position.x + directionX * distanceToMove,
-            y: position.y + directionY * distanceToMove
-        )
-    }
 
     override func die() {
         super.die()

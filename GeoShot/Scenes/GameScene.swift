@@ -26,7 +26,10 @@ class GameScene: SKScene {
 
     private var lastUpdateTime: TimeInterval = 0
     private var lastFireTime: TimeInterval = 0
-    private let fireRate: TimeInterval = 0.5
+    private var currentFireInterval: TimeInterval {
+        let rateUpgrades = gameState.upgrades.filter { $0 == .fireRate }.count
+        return 0.5 / (1.0 + 0.25 * Double(rateUpgrades))
+    }
     private var isFiring: Bool { fireTouch != nil }
 
     private var worldNode: SKNode!
@@ -56,6 +59,9 @@ class GameScene: SKScene {
     private var lastUpgradesCount = -1
     private var elapsedTime: TimeInterval = 0
     private var playerInvulnerableTime: TimeInterval = 0
+    private var timeSinceLastDamage: TimeInterval = 0
+    private var isShowingUpgradeSelection = false
+    private var upgradeOverlayNode: SKNode?
 
     private var roomProgressLabel: SKLabelNode?
     private var minimap: DungeonMinimapNode?
@@ -682,6 +688,7 @@ class GameScene: SKScene {
         refreshDoorStates()
         minimap?.setClearedRooms(clearedCombatZoneIds)
         updateHUD()
+        showUpgradeSelectionUI()
     }
 
     private func onBossDefeated() {
@@ -896,6 +903,23 @@ class GameScene: SKScene {
     func isInFireArea(_ p: CGPoint) -> Bool { p.x > viewportSize.width * 0.1 }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if isShowingUpgradeSelection {
+            for t in touches {
+                let loc = t.location(in: hudNode)
+                let nodesAtPoint = hudNode.nodes(at: loc)
+                for node in nodesAtPoint {
+                    if node.name == "upgrade_card_left" || node.name == "upgrade_card_right" {
+                        if let card = node as? SKShapeNode,
+                           let upgradeVal = card.userData?["upgrade"] as? UpgradeType {
+                            applySelectedUpgrade(upgradeVal, cardNode: card)
+                            return
+                        }
+                    }
+                }
+            }
+            return
+        }
+
         for t in touches {
             let loc = t.location(in: gameCamera)
             if joystickTouch == nil && isInJoystickArea(loc) {
@@ -928,6 +952,15 @@ class GameScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         guard let player = player, let joystick = joystick else { return }
 
+        if isShowingUpgradeSelection {
+            player.physicsBody?.velocity = .zero
+            for enemy in enemies { enemy.physicsBody?.velocity = .zero }
+            squared?.physicsBody?.velocity = .zero
+            plusMiniboss?.physicsBody?.velocity = .zero
+            pentagonBoss?.physicsBody?.velocity = .zero
+            return
+        }
+
         let deltaTime = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
         lastUpdateTime = currentTime
 
@@ -937,6 +970,21 @@ class GameScene: SKScene {
             updateTimerLabel()
             updateScoreLabel()
             updateUpgradesUI()
+            
+            // Auto-Regeneração
+            let regenCount = gameState.upgrades.filter { $0 == .regen }.count
+            if regenCount > 0 && gameState.hp < gameState.maxHp {
+                timeSinceLastDamage += deltaTime
+                let healCooldown = 8.0 / Double(regenCount)
+                if timeSinceLastDamage >= healCooldown {
+                    gameState.heal(1)
+                    player.setHP(gameState.hp)
+                    updateHPLabel()
+                    timeSinceLastDamage = 0
+                }
+            } else {
+                timeSinceLastDamage = 0
+            }
         }
 
         let movementAngle: CGFloat? = joystick.direction != .zero
@@ -1010,10 +1058,28 @@ class GameScene: SKScene {
             }
         }
 
-        if isFiring && currentTime - lastFireTime >= fireRate {
-            let bullet = BulletNode(position: player.position, direction: player.fireDirection)
-            worldNode.addChild(bullet)
-            bullets.append(bullet)
+        if isFiring && currentTime - lastFireTime >= currentFireInterval {
+            let damageUpgradeCount = gameState.upgrades.filter { $0 == .damage }.count
+            let bulletDamage = 1 + damageUpgradeCount
+            
+            let piercingUpgradeCount = gameState.upgrades.filter { $0 == .piercing }.count
+            let isPiercing = piercingUpgradeCount > 0
+            
+            let extraBulletUpgradeCount = gameState.upgrades.filter { $0 == .extraBullet }.count
+            let bulletCount = 1 + extraBulletUpgradeCount
+            
+            let baseAngle = atan2(player.fireDirection.dy, player.fireDirection.dx)
+            let spreadAngle: CGFloat = 0.2 // ~11.5 degrees spread angle between bullets
+            
+            for i in 0..<bulletCount {
+                let offset = (CGFloat(i) - CGFloat(bulletCount - 1) / 2.0) * spreadAngle
+                let angle = baseAngle + offset
+                let dir = CGVector(dx: cos(angle), dy: sin(angle))
+                
+                let bullet = BulletNode(position: player.position, direction: dir, damage: bulletDamage, isPiercing: isPiercing)
+                worldNode.addChild(bullet)
+                bullets.append(bullet)
+            }
             lastFireTime = currentTime
         }
 
@@ -1099,6 +1165,7 @@ class GameScene: SKScene {
     private func playerTakeDamage(_ amount: Int) {
         guard gameState.isAlive && playerInvulnerableTime <= 0 else { return }
 
+        timeSinceLastDamage = 0
         gameState.takeDamage(amount)
         player.maxHp = gameState.maxHp
         player.setHP(gameState.hp)
@@ -1159,6 +1226,308 @@ class GameScene: SKScene {
         }
         targetIndicator?.position = position
     }
+
+    // MARK: - Upgrade System UI & Logic
+
+    private func showUpgradeSelectionUI() {
+        guard !isShowingUpgradeSelection else { return }
+        isShowingUpgradeSelection = true
+        
+        // Pause world node to freeze game world
+        worldNode.isPaused = true
+        
+        // Cancel active touches/joystick inputs
+        joystickTouch = nil
+        fireTouch = nil
+        joystick.disappear()
+        
+        // Create root overlay node
+        let overlay = SKNode()
+        overlay.zPosition = 100
+        hudNode.addChild(overlay)
+        upgradeOverlayNode = overlay
+        
+        // Background dim
+        let dim = SKShapeNode(rectOf: viewportSize)
+        dim.fillColor = SKColor.black.withAlphaComponent(0.7)
+        dim.strokeColor = .clear
+        dim.zPosition = -10
+        overlay.addChild(dim)
+        
+        // Header Title
+        let headerLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+        headerLabel.text = "ESCOLHE UM UPGRADE"
+        headerLabel.fontSize = 24
+        headerLabel.fontColor = .cyan
+        headerLabel.position = CGPoint(x: 0, y: 130)
+        headerLabel.zPosition = 1
+        overlay.addChild(headerLabel)
+        
+        // Subtitle
+        let subLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+        subLabel.text = "SALA LIMPA! SELECIONA UMA MELHORIA:"
+        subLabel.fontSize = 11
+        subLabel.fontColor = .white
+        subLabel.alpha = 0.7
+        subLabel.position = CGPoint(x: 0, y: 105)
+        subLabel.zPosition = 1
+        overlay.addChild(subLabel)
+        
+        // Pull 2 random upgrades
+        let selectedUpgrades = getRandomUpgrades(count: 2)
+        guard selectedUpgrades.count >= 2 else {
+            isShowingUpgradeSelection = false
+            worldNode.isPaused = false
+            overlay.removeFromParent()
+            return
+        }
+        
+        // Card layout
+        let cardWidth: CGFloat = 135
+        let cardHeight: CGFloat = 200
+        let gap: CGFloat = 24
+        
+        let cardXPositions: [CGFloat] = [
+            -(cardWidth / 2 + gap / 2),
+            (cardWidth / 2 + gap / 2)
+        ]
+        
+        let cardNames = ["upgrade_card_left", "upgrade_card_right"]
+        
+        for (i, upgrade) in selectedUpgrades.enumerated() {
+            let xPos = cardXPositions[i]
+            
+            let card = SKShapeNode(rectOf: CGSize(width: cardWidth, height: cardHeight), cornerRadius: 10)
+            card.name = cardNames[i]
+            card.fillColor = SKColor(red: 0.05, green: 0.05, blue: 0.07, alpha: 0.95)
+            card.strokeColor = upgrade.color
+            card.lineWidth = 2.0
+            card.glowWidth = 1.0
+            card.position = CGPoint(x: xPos, y: -20)
+            card.zPosition = 5
+            card.userData = NSMutableDictionary()
+            card.userData?["upgrade"] = upgrade
+            overlay.addChild(card)
+            
+            // Add subtle pulse to cards
+            let scaleUp = SKAction.scale(to: 1.03, duration: 1.0 + Double(i)*0.2)
+            scaleUp.timingMode = .easeInEaseOut
+            let scaleDown = SKAction.scale(to: 0.97, duration: 1.0 + Double(i)*0.2)
+            scaleDown.timingMode = .easeInEaseOut
+            card.run(SKAction.repeatForever(SKAction.sequence([scaleUp, scaleDown])))
+            
+            // Card title label
+            let cardTitle = SKLabelNode(fontNamed: "Menlo-Bold")
+            cardTitle.text = upgrade.name
+            cardTitle.fontSize = 15
+            cardTitle.fontColor = .white
+            cardTitle.position = CGPoint(x: 0, y: cardHeight / 2 - 30)
+            cardTitle.zPosition = 6
+            card.addChild(cardTitle)
+            
+            // Retro shape icon
+            let iconPath = getRetroUpgradeIconPath(for: upgrade)
+            let iconNode = SKShapeNode(path: iconPath)
+            iconNode.fillColor = upgrade.color.withAlphaComponent(0.2)
+            iconNode.strokeColor = upgrade.color
+            iconNode.lineWidth = 1.5
+            iconNode.position = CGPoint(x: 0, y: 15)
+            iconNode.zPosition = 6
+            card.addChild(iconNode)
+            
+            // Description lines
+            let descString = getUpgradeDescription(for: upgrade)
+            let descLines = descString.components(separatedBy: "\n")
+            for (idx, line) in descLines.enumerated() {
+                let descLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+                descLabel.text = line
+                descLabel.fontSize = 9
+                descLabel.fontColor = .white
+                descLabel.alpha = idx == 0 ? 0.9 : 0.6
+                descLabel.position = CGPoint(x: 0, y: -cardHeight / 2 + 45 - CGFloat(idx) * 14)
+                descLabel.zPosition = 6
+                card.addChild(descLabel)
+            }
+        }
+    }
+    
+    private func getRandomUpgrades(count: Int) -> [UpgradeType] {
+        var pool = UpgradeType.allCases
+        var selected: [UpgradeType] = []
+        for _ in 0..<count {
+            if pool.isEmpty { break }
+            let index = Int.random(in: 0..<pool.count)
+            selected.append(pool.remove(at: index))
+        }
+        return selected
+    }
+    
+    private func applySelectedUpgrade(_ upgrade: UpgradeType, cardNode: SKShapeNode) {
+        guard let overlay = upgradeOverlayNode else { return }
+        
+        // Disable cards to prevent multiple clicks
+        for cardName in ["upgrade_card_left", "upgrade_card_right"] {
+            if let card = overlay.childNode(withName: cardName) {
+                card.name = "disabled"
+                card.removeAllActions()
+            }
+        }
+        
+        // Pop selected card visual feedback
+        let scaleUp = SKAction.scale(to: 1.15, duration: 0.15)
+        let scaleDown = SKAction.scale(to: 0.0, duration: 0.2)
+        let flash = SKAction.sequence([
+            SKAction.run { [weak cardNode] in cardNode?.fillColor = .white },
+            SKAction.wait(forDuration: 0.05),
+            SKAction.run { [weak cardNode] in cardNode?.fillColor = upgrade.color },
+            SKAction.wait(forDuration: 0.05)
+        ])
+        
+        let chooseAnimation = SKAction.group([
+            scaleUp,
+            SKAction.repeat(flash, count: 2)
+        ])
+        
+        // Apply the upgrade to GameState
+        gameState.addUpgrade(upgrade)
+        
+        // Synchronize player node Hp stats
+        player.maxHp = gameState.maxHp
+        player.setHP(gameState.hp)
+        updateHPLabel()
+        updateUpgradesUI()
+        
+        // Run animation and dismiss
+        cardNode.run(SKAction.sequence([
+            chooseAnimation,
+            scaleDown,
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                
+                // Fade out full overlay
+                let fade = SKAction.fadeOut(withDuration: 0.25)
+                overlay.run(fade) {
+                    overlay.removeFromParent()
+                    self.upgradeOverlayNode = nil
+                    
+                    // Resume game
+                    self.worldNode.isPaused = false
+                    self.isShowingUpgradeSelection = false
+                    self.lastUpdateTime = 0 // Critical to prevent huge deltaTime skip
+                }
+            }
+        ]))
+        
+        // Fade out non-selected card
+        for cardName in ["upgrade_card_left", "upgrade_card_right"] {
+            if let card = overlay.childNode(withName: cardName) as? SKShapeNode, card !== cardNode {
+                card.run(SKAction.fadeOut(withDuration: 0.2))
+            }
+        }
+    }
+    
+    private func getRetroUpgradeIconPath(for upgrade: UpgradeType) -> CGPath {
+        let path = CGMutablePath()
+        switch upgrade {
+        case .life:
+            // Retro heart
+            path.move(to: CGPoint(x: 0, y: -12))
+            path.addLine(to: CGPoint(x: -15, y: 3))
+            path.addLine(to: CGPoint(x: -15, y: 11))
+            path.addLine(to: CGPoint(x: -8, y: 16))
+            path.addLine(to: CGPoint(x: 0, y: 8))
+            path.addLine(to: CGPoint(x: 8, y: 16))
+            path.addLine(to: CGPoint(x: 15, y: 11))
+            path.addLine(to: CGPoint(x: 15, y: 3))
+            path.closeSubpath()
+        case .extraBullet:
+            // 3 fanning bullet chevrons
+            // Bullet 1 (left)
+            path.move(to: CGPoint(x: -15, y: -10))
+            path.addLine(to: CGPoint(x: -19, y: 5))
+            path.addLine(to: CGPoint(x: -15, y: 15))
+            path.addLine(to: CGPoint(x: -11, y: 5))
+            path.closeSubpath()
+            // Bullet 2 (center)
+            path.move(to: CGPoint(x: 0, y: -5))
+            path.addLine(to: CGPoint(x: -4, y: 10))
+            path.addLine(to: CGPoint(x: 0, y: 20))
+            path.addLine(to: CGPoint(x: 4, y: 10))
+            path.closeSubpath()
+            // Bullet 3 (right)
+            path.move(to: CGPoint(x: 15, y: -10))
+            path.addLine(to: CGPoint(x: 11, y: 5))
+            path.addLine(to: CGPoint(x: 15, y: 15))
+            path.addLine(to: CGPoint(x: 19, y: 5))
+            path.closeSubpath()
+        case .damage:
+            // Double dynamic sharp chevrons
+            path.move(to: CGPoint(x: -16, y: -12))
+            path.addLine(to: CGPoint(x: 0, y: 16))
+            path.addLine(to: CGPoint(x: 16, y: -12))
+            path.addLine(to: CGPoint(x: 0, y: -4))
+            path.closeSubpath()
+        case .speed:
+            // Two fast arrowheads pointing right
+            path.move(to: CGPoint(x: -14, y: -12))
+            path.addLine(to: CGPoint(x: -2, y: 0))
+            path.addLine(to: CGPoint(x: -14, y: 12))
+            path.addLine(to: CGPoint(x: -8, y: 12))
+            path.addLine(to: CGPoint(x: 4, y: 0))
+            path.addLine(to: CGPoint(x: -8, y: -12))
+            path.closeSubpath()
+            
+            path.move(to: CGPoint(x: -2, y: -12))
+            path.addLine(to: CGPoint(x: 10, y: 0))
+            path.addLine(to: CGPoint(x: -2, y: 12))
+            path.addLine(to: CGPoint(x: 4, y: 12))
+            path.addLine(to: CGPoint(x: 16, y: 0))
+            path.addLine(to: CGPoint(x: 4, y: -12))
+            path.closeSubpath()
+        case .fireRate:
+            // Crosshairs
+            path.addEllipse(in: CGRect(x: -15, y: -15, width: 30, height: 30))
+            path.addEllipse(in: CGRect(x: -5, y: -5, width: 10, height: 10))
+            path.move(to: CGPoint(x: -20, y: 0))
+            path.addLine(to: CGPoint(x: 20, y: 0))
+            path.move(to: CGPoint(x: 0, y: -20))
+            path.addLine(to: CGPoint(x: 0, y: 20))
+        case .piercing:
+            // Piercing Arrow
+            path.move(to: CGPoint(x: -22, y: 0))
+            path.addLine(to: CGPoint(x: 22, y: 0))
+            path.move(to: CGPoint(x: 12, y: -8))
+            path.addLine(to: CGPoint(x: 22, y: 0))
+            path.addLine(to: CGPoint(x: 12, y: 8))
+            // Shield in the middle
+            path.addRect(CGRect(x: -5, y: -15, width: 10, height: 30))
+        case .regen:
+            // Medical cross + ring
+            path.addEllipse(in: CGRect(x: -18, y: -18, width: 36, height: 36))
+            path.addRect(CGRect(x: -10, y: -3, width: 20, height: 6))
+            path.addRect(CGRect(x: -3, y: -10, width: 6, height: 20))
+        }
+        return path
+    }
+    
+    private func getUpgradeDescription(for upgrade: UpgradeType) -> String {
+        switch upgrade {
+        case .life:
+            return "+2 HP Máximo\nCura +2 HP"
+        case .extraBullet:
+            return "+1 Projétil por tiro\nDisparo em leque"
+        case .damage:
+            return "+1 Dano por bala\nProjéteis mais fortes"
+        case .speed:
+            return "+20% Velocidade\nMovimento ágil"
+        case .fireRate:
+            return "+25% Vel. Disparo\nFrequência aumentada"
+        case .piercing:
+            return "Balas Perfurantes\nAtravessam inimigos"
+        case .regen:
+            return "Auto-Regeneração\n1 HP/8s sem receber dano"
+        }
+    }
 }
 
 // MARK: - Physics contact handling
@@ -1172,22 +1541,31 @@ extension GameScene: SKPhysicsContactDelegate {
         case PhysicsCategory.bullet | PhysicsCategory.enemy:
             let bulletBody = a.categoryBitMask == PhysicsCategory.bullet ? a : b
             let enemyBody = a.categoryBitMask == PhysicsCategory.enemy ? a : b
-            if let bulletNode = bulletBody.node as? SKNode { bulletNode.removeFromParent() }
-            if let enemyNode = enemyBody.node as? EnemyNode {
-                let wasAlive = enemyNode.isAlive
-                let name = enemyNode.name ?? "enemy"
-                let pos = enemyNode.position
-                let color = enemyNode.fillColor
-                
-                enemyNode.takeDamage(1)
-                gameState.addDamage(1)
-                
-                if wasAlive && !enemyNode.isAlive {
-                    spawnGeometricExplosion(at: pos, color: color, shapeType: name)
-                    let shakeIntensity: CGFloat = (name == "plusMiniboss" || name == "pentagonBoss") ? 12 : 3
-                    let shakeDuration: TimeInterval = (name == "plusMiniboss" || name == "pentagonBoss") ? 0.4 : 0.15
-                    triggerScreenShake(intensity: shakeIntensity, duration: shakeDuration)
-                }
+            
+            guard let bulletNode = bulletBody.node as? BulletNode,
+                  let enemyNode = enemyBody.node as? EnemyNode else { break }
+            
+            let enemyId = ObjectIdentifier(enemyNode)
+            guard !bulletNode.hitEnemyIdentifiers.contains(enemyId) else { break }
+            bulletNode.hitEnemyIdentifiers.insert(enemyId)
+            
+            let wasAlive = enemyNode.isAlive
+            let name = enemyNode.name ?? "enemy"
+            let pos = enemyNode.position
+            let color = enemyNode.fillColor
+            
+            enemyNode.takeDamage(bulletNode.damage)
+            gameState.addDamage(bulletNode.damage)
+            
+            if wasAlive && !enemyNode.isAlive {
+                spawnGeometricExplosion(at: pos, color: color, shapeType: name)
+                let shakeIntensity: CGFloat = (name == "plusMiniboss" || name == "pentagonBoss") ? 12 : 3
+                let shakeDuration: TimeInterval = (name == "plusMiniboss" || name == "pentagonBoss") ? 0.4 : 0.15
+                triggerScreenShake(intensity: shakeIntensity, duration: shakeDuration)
+            }
+            
+            if !bulletNode.isPiercing {
+                bulletNode.removeFromParent()
             }
 
         case PhysicsCategory.bullet | PhysicsCategory.wall:

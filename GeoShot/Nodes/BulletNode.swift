@@ -7,8 +7,13 @@ import SpriteKit
 
 class BulletNode: SKShapeNode {
     let bulletSpeed: CGFloat = 400
+    var damage: Int = 1
+    var isPiercing: Bool = false
+    var hitEnemyIdentifiers: Set<ObjectIdentifier> = []
     
-    init(position: CGPoint, direction: CGVector) {
+    init(position: CGPoint, direction: CGVector, damage: Int = 1, isPiercing: Bool = false) {
+        self.damage = damage
+        self.isPiercing = isPiercing
         super.init()
 
         let circlePath = UIBezierPath(arcCenter: .zero, radius: 3, startAngle: 0, endAngle: CGFloat.pi * 2, clockwise: true)

@@ -54,7 +54,7 @@ final class GameState {
 
     var isAlive: Bool { hp > 0 }
 
-    init(hp: Int = 6, maxHp: Int = 6, score: Int = 0, damageDealt: Int = 0, elapsedTime: TimeInterval = 0, upgrades: [UpgradeType] = [.damage, .speed]) {
+    init(hp: Int = 6, maxHp: Int = 6, score: Int = 0, damageDealt: Int = 0, elapsedTime: TimeInterval = 0, upgrades: [UpgradeType] = []) {
         self.hp = hp
         self.maxHp = maxHp
         self.score = score
@@ -91,7 +91,8 @@ final class GameState {
     }
 
     func reset() {
-        hp = maxHp
+        maxHp = 6
+        hp = 6
         score = 0
         damageDealt = 0
         elapsedTime = 0

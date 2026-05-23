@@ -9,7 +9,7 @@ import SpriteKit
 class CharacterNode: SKShapeNode {
     private(set) var hp: Int
     var maxHp: Int
-    let moveSpeed: CGFloat
+    var moveSpeed: CGFloat
 
     var isAlive: Bool { hp > 0 }
 

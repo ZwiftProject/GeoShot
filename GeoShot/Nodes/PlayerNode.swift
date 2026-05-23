@@ -15,6 +15,16 @@ class PlayerNode: CharacterNode {
     let gameState: GameState
     var fireDirection: CGVector = CGVector(dx: 1, dy: 0)
 
+    override var moveSpeed: CGFloat {
+        get {
+            let speedUpgrades = gameState.upgrades.filter { $0 == .speed }.count
+            return 200.0 + CGFloat(speedUpgrades) * 40.0
+        }
+        set {
+            super.moveSpeed = newValue
+        }
+    }
+
     init(gameState: GameState) {
         self.gameState = gameState
         super.init(maxHp: gameState.maxHp, moveSpeed: 200, initialHp: gameState.hp)

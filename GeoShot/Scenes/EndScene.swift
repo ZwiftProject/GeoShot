@@ -31,6 +31,14 @@ class EndScene: SKScene {
     override func didMove(to view: SKView) {
         self.backgroundColor = SKColor(red: 0.05, green: 0.05, blue: 0.08, alpha: 1.0)
         setupUI()
+        
+        if score > 0 {
+            let wait = SKAction.wait(forDuration: 1.5)
+            let presentAlert = SKAction.run { [weak self] in
+                self?.presentNameInputAlert()
+            }
+            run(SKAction.sequence([wait, presentAlert]))
+        }
     }
     
     private func setupUI() {
@@ -281,6 +289,43 @@ class EndScene: SKScene {
         }
         path.closeSubpath()
         return path
+    }
+    
+    private func presentNameInputAlert() {
+        guard let viewController = self.view?.window?.rootViewController else { return }
+        
+        let alert = UIAlertController(title: "NOVO RECORDE!", message: "Insere as tuas iniciais (3 letras):", preferredStyle: .alert)
+        alert.addTextField { textField in
+            textField.placeholder = "AAA"
+            textField.autocapitalizationType = .allCharacters
+            textField.textAlignment = .center
+            
+            // Limit text input to 3 characters
+            NotificationCenter.default.addObserver(forName: UITextField.textDidChangeNotification, object: textField, queue: .main) { _ in
+                if let text = textField.text, text.count > 3 {
+                    textField.text = String(text.prefix(3))
+                }
+            }
+        }
+        
+        let submitAction = UIAlertAction(title: "SUBMETER", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines).prefix(3).uppercased() ?? "KTE"
+            let finalName = name.isEmpty ? "KTE" : String(name)
+            
+            LeaderboardManager.shared.submitScore(name: finalName, score: self.score, time: self.time) { [weak self] success in
+                if success {
+                    DispatchQueue.main.async {
+                        self?.showLeaderboard()
+                    }
+                }
+            }
+        }
+        
+        alert.addAction(submitAction)
+        alert.addAction(UIAlertAction(title: "CANCELAR", style: .cancel, handler: nil))
+        
+        viewController.present(alert, animated: true, completion: nil)
     }
     
     private func showLeaderboard() {

@@ -16,9 +16,23 @@ struct LeaderboardRecord: Identifiable {
 
 class LeaderboardManager {
     static let shared = LeaderboardManager()
+    private var projectId: String {
+        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+              let dict = NSDictionary(contentsOfFile: path),
+              let id = dict["PROJECT_ID"] as? String else {
+            return "geoshotgame"
+        }
+        return id
+    }
     
-    private let projectId = "geoshotgame"
-    private let apiKey = "AIzaSyAqeViqDcTRszXRuHZdHdWdE-P8aZ3bRj8"
+    private var apiKey: String {
+        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+              let dict = NSDictionary(contentsOfFile: path),
+              let key = dict["API_KEY"] as? String else {
+            return ""
+        }
+        return key
+    }
     
     private var baseURL: URL {
         return URL(string: "https://firestore.googleapis.com/v1/projects/\(projectId)/databases/(default)/documents")!

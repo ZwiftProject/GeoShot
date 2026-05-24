@@ -6,6 +6,9 @@
 //
 
 import UIKit
+#if canImport(FirebaseCore)
+import FirebaseCore
+#endif
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -15,6 +18,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        #if canImport(FirebaseCore)
+        FirebaseApp.configure()
+        #endif
+        
+        // Silent anonymous sign-in on startup
+        LeaderboardManager.shared.signInAnonymously { success in
+            if success {
+                print("Silent anonymous auth success!")
+            } else {
+                print("Silent anonymous auth failed.")
+            }
+        }
+        
         return true
     }
 

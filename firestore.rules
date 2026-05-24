@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /leaderboard/{document} {
+      // Qualquer pessoa pode ler a leaderboard
+      allow read: if true;
+      
+      // Apenas utilizadores autenticados podem submeter pontuações e apenas se o userId no documento coincidir com o seu UID de autenticação
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      
+      // Não é permitido atualizar ou apagar recordes por questões de segurança da leaderboard
+      allow update, delete: if false;
+    }
+  }
+}

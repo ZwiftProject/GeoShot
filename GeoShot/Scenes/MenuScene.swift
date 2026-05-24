@@ -281,9 +281,24 @@ class MenuButtonNode: SKNode {
 // MARK: - Leaderboard Overlay Node
 class LeaderboardOverlayNode: SKNode {
     private let closeAction: () -> Void
+    private let panel: SKShapeNode
+    private let panelSize: CGSize
     
     init(size: CGSize, closeAction: @escaping () -> Void) {
         self.closeAction = closeAction
+        
+        // Main panel size
+        self.panelSize = CGSize(width: size.width * 0.65, height: size.height * 0.75)
+        let panelPath = CGPath(roundedRect: CGRect(x: -panelSize.width/2, y: -panelSize.height/2, width: panelSize.width, height: panelSize.height), cornerWidth: 12, cornerHeight: 12, transform: nil)
+        
+        self.panel = SKShapeNode(path: panelPath)
+        self.panel.fillColor = SKColor(red: 0.04, green: 0.04, blue: 0.06, alpha: 1.0)
+        self.panel.strokeColor = .cyan
+        self.panel.lineWidth = 2.5
+        self.panel.glowWidth = 2.5
+        self.panel.zPosition = 101
+        self.panel.position = CGPoint(x: size.width/2, y: size.height/2)
+        
         super.init()
         self.isUserInteractionEnabled = true
         
@@ -294,18 +309,6 @@ class LeaderboardOverlayNode: SKNode {
         bgOverlay.zPosition = 100
         bgOverlay.position = CGPoint(x: size.width/2, y: size.height/2)
         addChild(bgOverlay)
-        
-        // Main panel
-        let panelSize = CGSize(width: size.width * 0.65, height: size.height * 0.75)
-        let panelPath = CGPath(roundedRect: CGRect(x: -panelSize.width/2, y: -panelSize.height/2, width: panelSize.width, height: panelSize.height), cornerWidth: 12, cornerHeight: 12, transform: nil)
-        
-        let panel = SKShapeNode(path: panelPath)
-        panel.fillColor = SKColor(red: 0.04, green: 0.04, blue: 0.06, alpha: 1.0)
-        panel.strokeColor = .cyan
-        panel.lineWidth = 2.5
-        panel.glowWidth = 2.5
-        panel.zPosition = 101
-        panel.position = CGPoint(x: size.width/2, y: size.height/2)
         addChild(panel)
         
         // Leaderboard Title
@@ -317,19 +320,49 @@ class LeaderboardOverlayNode: SKNode {
         title.zPosition = 102
         panel.addChild(title)
         
-        // Mock scores
-        let scores = [
-            ("1. KITE", "9990 PTS"),
-            ("2. SQU", "7500 PTS"),
-            ("3. TRI", "4200 PTS"),
-            ("4. PLS", "2500 PTS"),
-            ("5. PTG", "1200 PTS")
-        ]
+        // Loading Label
+        let loadingLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+        loadingLabel.text = "A CARREGAR..."
+        loadingLabel.fontSize = 18
+        loadingLabel.fontColor = .lightGray
+        loadingLabel.position = CGPoint(x: 0, y: 0)
+        loadingLabel.zPosition = 102
+        panel.addChild(loadingLabel)
+        
+        // Close button at bottom
+        let closeBtn = MenuButtonNode(text: "CLOSE", size: CGSize(width: 140, height: 40)) { [weak self] in
+            self?.closeAction()
+        }
+        closeBtn.position = CGPoint(x: 0, y: -panelSize.height/2 + 45)
+        closeBtn.zPosition = 103
+        panel.addChild(closeBtn)
+        
+        // Load data from Firebase
+        LeaderboardManager.shared.fetchTopScores { [weak self] records in
+            DispatchQueue.main.async {
+                loadingLabel.removeFromParent()
+                self?.displayRecords(records)
+            }
+        }
+    }
+    
+    private func displayRecords(_ records: [LeaderboardRecord]) {
+        if records.isEmpty {
+            let emptyLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+            emptyLabel.text = "SEM RECORDES"
+            emptyLabel.fontSize = 18
+            emptyLabel.fontColor = .cyan
+            emptyLabel.position = CGPoint(x: 0, y: 0)
+            emptyLabel.zPosition = 102
+            panel.addChild(emptyLabel)
+            return
+        }
         
         var startY = panelSize.height/2 - 100
-        for (name, score) in scores {
+        for (index, record) in records.enumerated() {
+            let rank = index + 1
             let nameLabel = SKLabelNode(fontNamed: "Menlo-Bold")
-            nameLabel.text = name
+            nameLabel.text = "\(rank). \(record.name)"
             nameLabel.fontSize = 18
             nameLabel.fontColor = .cyan
             nameLabel.horizontalAlignmentMode = .left
@@ -338,7 +371,7 @@ class LeaderboardOverlayNode: SKNode {
             panel.addChild(nameLabel)
             
             let scoreLabel = SKLabelNode(fontNamed: "Menlo-Bold")
-            scoreLabel.text = score
+            scoreLabel.text = "\(record.score) PTS"
             scoreLabel.fontSize = 18
             scoreLabel.fontColor = .white
             scoreLabel.horizontalAlignmentMode = .right
@@ -348,14 +381,6 @@ class LeaderboardOverlayNode: SKNode {
             
             startY -= 35
         }
-        
-        // Close button at bottom
-        let closeBtn = MenuButtonNode(text: "CLOSE", size: CGSize(width: 140, height: 40)) { [weak self] in
-            self?.closeAction()
-        }
-        closeBtn.position = CGPoint(x: 0, y: -panelSize.height/2 + 45)
-        closeBtn.zPosition = 103
-        panel.addChild(closeBtn)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {}
@@ -372,6 +397,11 @@ class LeaderboardOverlayNode: SKNode {
 class SettingsOverlayNode: SKNode {
     private let closeAction: () -> Void
     private var musicBtn: MenuButtonNode!
+    private var syncBtn: MenuButtonNode?
+    private var loginBtn: MenuButtonNode?
+    private var statusLabel: SKLabelNode!
+    private let panel: SKShapeNode
+    private let panelSize: CGSize
     
     private var isMusicEnabled: Bool {
         get {
@@ -384,6 +414,19 @@ class SettingsOverlayNode: SKNode {
     
     init(size: CGSize, closeAction: @escaping () -> Void) {
         self.closeAction = closeAction
+        
+        // Main panel size
+        self.panelSize = CGSize(width: size.width * 0.60, height: size.height * 0.70)
+        let panelPath = CGPath(roundedRect: CGRect(x: -panelSize.width/2, y: -panelSize.height/2, width: panelSize.width, height: panelSize.height), cornerWidth: 12, cornerHeight: 12, transform: nil)
+        
+        self.panel = SKShapeNode(path: panelPath)
+        self.panel.fillColor = SKColor(red: 0.04, green: 0.04, blue: 0.06, alpha: 1.0)
+        self.panel.strokeColor = .cyan
+        self.panel.lineWidth = 2.5
+        self.panel.glowWidth = 2.5
+        self.panel.zPosition = 101
+        self.panel.position = CGPoint(x: size.width/2, y: size.height/2)
+        
         super.init()
         self.isUserInteractionEnabled = true
         
@@ -394,18 +437,6 @@ class SettingsOverlayNode: SKNode {
         bgOverlay.zPosition = 100
         bgOverlay.position = CGPoint(x: size.width/2, y: size.height/2)
         addChild(bgOverlay)
-        
-        // Main panel
-        let panelSize = CGSize(width: size.width * 0.55, height: size.height * 0.65)
-        let panelPath = CGPath(roundedRect: CGRect(x: -panelSize.width/2, y: -panelSize.height/2, width: panelSize.width, height: panelSize.height), cornerWidth: 12, cornerHeight: 12, transform: nil)
-        
-        let panel = SKShapeNode(path: panelPath)
-        panel.fillColor = SKColor(red: 0.04, green: 0.04, blue: 0.06, alpha: 1.0)
-        panel.strokeColor = .cyan
-        panel.lineWidth = 2.5
-        panel.glowWidth = 2.5
-        panel.zPosition = 101
-        panel.position = CGPoint(x: size.width/2, y: size.height/2)
         addChild(panel)
         
         // Title
@@ -417,28 +448,202 @@ class SettingsOverlayNode: SKNode {
         title.zPosition = 102
         panel.addChild(title)
         
+        // Account Status Label
+        statusLabel = SKLabelNode(fontNamed: "Menlo-Bold")
+        statusLabel.fontSize = 12
+        statusLabel.fontColor = .lightGray
+        statusLabel.position = CGPoint(x: 0, y: 70)
+        statusLabel.zPosition = 102
+        panel.addChild(statusLabel)
+        
+        updateAccountStatusLabel()
+        
+        // Create buttons depending on login state
+        setupAuthButtons()
+        
         // Music button
         let initialMusicText = isMusicEnabled ? "MUSIC: ON" : "MUSIC: OFF"
-        musicBtn = MenuButtonNode(text: initialMusicText, size: CGSize(width: 220, height: 42)) { [weak self] in
+        musicBtn = MenuButtonNode(text: initialMusicText, size: CGSize(width: 220, height: 38)) { [weak self] in
             self?.toggleMusic()
         }
-        musicBtn.position = CGPoint(x: 0, y: 10)
+        musicBtn.position = CGPoint(x: 0, y: -70)
         musicBtn.zPosition = 102
         panel.addChild(musicBtn)
         
         // Close button at bottom
-        let closeBtn = MenuButtonNode(text: "CLOSE", size: CGSize(width: 140, height: 40)) { [weak self] in
+        let closeBtn = MenuButtonNode(text: "CLOSE", size: CGSize(width: 140, height: 38)) { [weak self] in
             self?.closeAction()
         }
-        closeBtn.position = CGPoint(x: 0, y: -panelSize.height/2 + 45)
+        closeBtn.position = CGPoint(x: 0, y: -panelSize.height/2 + 40)
         closeBtn.zPosition = 103
         panel.addChild(closeBtn)
+    }
+    
+    private func updateAccountStatusLabel() {
+        if let email = LeaderboardManager.shared.userEmail {
+            statusLabel.text = "CONTA: \(email.uppercased())"
+            statusLabel.fontColor = .green
+        } else {
+            statusLabel.text = "CONTA: TEMPORÁRIA (LOCAL)"
+            statusLabel.fontColor = .lightGray
+        }
+    }
+    
+    private func setupAuthButtons() {
+        syncBtn?.removeFromParent()
+        loginBtn?.removeFromParent()
+        
+        if LeaderboardManager.shared.isAnonymous {
+            // VINCULAR Button
+            let sync = MenuButtonNode(text: "VINCULAR CONTA", size: CGSize(width: 220, height: 38)) { [weak self] in
+                self?.presentSyncAccountAlert()
+            }
+            sync.position = CGPoint(x: 0, y: 25)
+            sync.zPosition = 102
+            panel.addChild(sync)
+            self.syncBtn = sync
+            
+            // LOGIN Button
+            let login = MenuButtonNode(text: "INICIAR SESSÃO", size: CGSize(width: 220, height: 38)) { [weak self] in
+                self?.presentLoginAlert()
+            }
+            login.position = CGPoint(x: 0, y: -20)
+            login.zPosition = 102
+            panel.addChild(login)
+            self.loginBtn = login
+        } else {
+            // Se já tem conta permanente, mostrar apenas botão de Logout
+            let logout = MenuButtonNode(text: "TERMINAR SESSÃO", size: CGSize(width: 220, height: 38)) { [weak self] in
+                self?.handleLogout()
+            }
+            logout.position = CGPoint(x: 0, y: 10)
+            logout.zPosition = 102
+            panel.addChild(logout)
+            self.syncBtn = logout
+        }
     }
     
     private func toggleMusic() {
         isMusicEnabled.toggle()
         let text = isMusicEnabled ? "MUSIC: ON" : "MUSIC: OFF"
         musicBtn.updateText(text)
+    }
+    
+    private func presentSyncAccountAlert() {
+        guard let viewController = self.scene?.view?.window?.rootViewController else { return }
+        
+        let alert = UIAlertController(title: "VINCULAR CONTA", message: "Regista um email e password para guardar e sincronizar os teus recordes online:", preferredStyle: .alert)
+        alert.addTextField { textField in
+            textField.placeholder = "email@exemplo.com"
+            textField.keyboardType = .emailAddress
+            textField.autocapitalizationType = .none
+        }
+        alert.addTextField { textField in
+            textField.placeholder = "Palavra-passe (mín. 6 caracteres)"
+            textField.isSecureTextEntry = true
+        }
+        
+        let submitAction = UIAlertAction(title: "REGISTAR", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            let email = alert.textFields?[0].text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let password = alert.textFields?[1].text ?? ""
+            
+            if email.isEmpty || password.count < 6 {
+                self.showErrorAlert(message: "Por favor insere um email válido e password com pelo menos 6 caracteres.")
+                return
+            }
+            
+            LeaderboardManager.shared.linkAccount(email: email, password: password) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.updateAccountStatusLabel()
+                        self?.setupAuthButtons()
+                        self?.showSuccessAlert(message: "Conta vinculada com sucesso!")
+                    case .failure(let error):
+                        self?.showErrorAlert(message: error.localizedDescription)
+                    }
+                }
+            }
+        }
+        
+        alert.addAction(submitAction)
+        alert.addAction(UIAlertAction(title: "CANCELAR", style: .cancel, handler: nil))
+        
+        viewController.present(alert, animated: true, completion: nil)
+    }
+    
+    private func presentLoginAlert() {
+        guard let viewController = self.scene?.view?.window?.rootViewController else { return }
+        
+        let alert = UIAlertController(title: "INICIAR SESSÃO", message: "Introduz os teus dados para recuperar o teu perfil noutro dispositivo:", preferredStyle: .alert)
+        alert.addTextField { textField in
+            textField.placeholder = "email@exemplo.com"
+            textField.keyboardType = .emailAddress
+            textField.autocapitalizationType = .none
+        }
+        alert.addTextField { textField in
+            textField.placeholder = "Palavra-passe"
+            textField.isSecureTextEntry = true
+        }
+        
+        let submitAction = UIAlertAction(title: "ENTRAR", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            let email = alert.textFields?[0].text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let password = alert.textFields?[1].text ?? ""
+            
+            if email.isEmpty || password.isEmpty {
+                self.showErrorAlert(message: "Por favor insere o email e password.")
+                return
+            }
+            
+            LeaderboardManager.shared.signInWithEmail(email: email, password: password) { [weak self] result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        self?.updateAccountStatusLabel()
+                        self?.setupAuthButtons()
+                        self?.showSuccessAlert(message: "Iniciou sessão com sucesso!")
+                    case .failure(let error):
+                        self?.showErrorAlert(message: error.localizedDescription)
+                    }
+                }
+            }
+        }
+        
+        alert.addAction(submitAction)
+        alert.addAction(UIAlertAction(title: "CANCELAR", style: .cancel, handler: nil))
+        
+        viewController.present(alert, animated: true, completion: nil)
+    }
+    
+    private func handleLogout() {
+        UserDefaults.standard.removeObject(forKey: "firebase_id_token")
+        UserDefaults.standard.removeObject(forKey: "firebase_user_id")
+        UserDefaults.standard.removeObject(forKey: "firebase_user_email")
+        UserDefaults.standard.synchronize()
+        
+        LeaderboardManager.shared.signInAnonymously { [weak self] success in
+            DispatchQueue.main.async {
+                self?.updateAccountStatusLabel()
+                self?.setupAuthButtons()
+                self?.showSuccessAlert(message: "Terminou sessão.")
+            }
+        }
+    }
+    
+    private func showErrorAlert(message: String) {
+        guard let viewController = self.scene?.view?.window?.rootViewController else { return }
+        let alert = UIAlertController(title: "ERRO", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        viewController.present(alert, animated: true, completion: nil)
+    }
+    
+    private func showSuccessAlert(message: String) {
+        guard let viewController = self.scene?.view?.window?.rootViewController else { return }
+        let alert = UIAlertController(title: "SUCESSO", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        viewController.present(alert, animated: true, completion: nil)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {}

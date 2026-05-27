@@ -1044,7 +1044,8 @@ class GameScene: SKScene {
         }
 
         bullets.removeAll { bullet in
-            if bullet.isOutside(bounds: currentWorldBounds) {
+            let traveled = hypot(bullet.position.x - bullet.startPosition.x, bullet.position.y - bullet.startPosition.y)
+            if traveled > player.shootingRange || bullet.isOutside(bounds: currentWorldBounds) {
                 bullet.removeFromParent()
                 return true
             }
@@ -1160,7 +1161,10 @@ class GameScene: SKScene {
 
         for enemy in enemies where enemy.parent != nil && enemy.hp > 0 {
             let d = hypot(enemy.position.x - player.position.x, enemy.position.y - player.position.y)
-            if d < closestDistance { closestDistance = d; closest = enemy }
+            if d < closestDistance && d <= player.shootingRange { 
+                closestDistance = d
+                closest = enemy 
+            }
         }
 
         return closest

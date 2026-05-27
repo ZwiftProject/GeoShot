@@ -14,6 +14,7 @@ import SpriteKit
 class PlayerNode: CharacterNode {
     let gameState: GameState
     var fireDirection: CGVector = CGVector(dx: 1, dy: 0)
+    var shootingRange: CGFloat = 350.0
 
     override var moveSpeed: CGFloat {
         get {

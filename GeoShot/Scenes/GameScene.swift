@@ -41,6 +41,9 @@ class GameScene: SKScene {
     private var zonesById: [String: DungeonZone] = [:]
     private var passages: [DungeonPassage] = []
     private var doorNodes: [String: DungeonDoorNode] = [:]
+    
+    private var currentCombatWave = 0
+    private var totalCombatWaves = 0
 
     private var currentZoneId: String = "start"
     private var clearedCombatZoneIds: Set<String> = []
@@ -627,6 +630,10 @@ class GameScene: SKScene {
             )
         }
         
+        currentCombatWave = 1
+        totalCombatWaves = (currentFloor == 1) ? 3 : 4
+        showWaveBanner(wave: currentCombatWave, total: totalCombatWaves)
+        
         closeDoors(forCombatZone: zoneId)
         spawnCombat(in: zoneId)
     }
@@ -638,7 +645,8 @@ class GameScene: SKScene {
         let diff = DungeonMap.difficulty(forFloor: currentFloor)
         let b = zone.walkBounds.insetBy(dx: 36, dy: 36)
 
-        for _ in 0..<diff.combatTriangleCount {
+        let triangleCount = diff.combatTriangleCount + (currentCombatWave - 1) * 2
+        for _ in 0..<triangleCount {
             let enemy = TriangleNode(gameState: gameState, moveSpeed: diff.triangleMoveSpeed, difficulty: zone.difficulty)
             enemy.position = CGPoint(
                 x: CGFloat.random(in: b.minX...b.maxX),
@@ -648,14 +656,17 @@ class GameScene: SKScene {
             enemies.append(enemy)
         }
 
-        if diff.combatSquaredCount >= 1 {
-            let sq = SquaredNode(gameState: gameState, moveSpeed: diff.squaredMoveSpeed, difficulty: zone.difficulty)
-            sq.position = CGPoint(
-                x: CGFloat.random(in: b.minX...b.maxX),
-                y: CGFloat.random(in: b.minY...b.maxY)
-            )
-            worldNode.addChild(sq)
-            enemies.append(sq)
+        let squaredCount = diff.combatSquaredCount + (currentCombatWave - 1)
+        if squaredCount >= 1 {
+            for _ in 0..<squaredCount {
+                let sq = SquaredNode(gameState: gameState, moveSpeed: diff.squaredMoveSpeed, difficulty: zone.difficulty)
+                sq.position = CGPoint(
+                    x: CGFloat.random(in: b.minX...b.maxX),
+                    y: CGFloat.random(in: b.minY...b.maxY)
+                )
+                worldNode.addChild(sq)
+                enemies.append(sq)
+            }
         }
     }
 
@@ -708,7 +719,13 @@ class GameScene: SKScene {
         let required = DungeonFloorPlan.requiredCombatZoneIds(for: currentFloor).count
         var suffix = zone.displayTitle
         if zone.kind == .combat {
-            suffix += clearedCombatZoneIds.contains(zone.id) ? " · Limpa" : " · Combate"
+            if clearedCombatZoneIds.contains(zone.id) {
+                suffix += " · Limpa"
+            } else if activeCombatZoneId == zone.id {
+                suffix += " · Onda \(currentCombatWave)/\(totalCombatWaves)"
+            } else {
+                suffix += " · Combate"
+            }
         } else if zone.kind == .boss {
             suffix += bossSpawnedThisFloor ? " · Boss" : (allRequiredCombatCleared() ? " · Aberta" : " · Bloqueada")
         }
@@ -756,6 +773,24 @@ class GameScene: SKScene {
         } else {
             shakeDecay = intensity
         }
+    }
+
+    private func showWaveBanner(wave: Int, total: Int) {
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.text = "ONDA \(wave) / \(total)"
+        label.fontSize = 24
+        label.fontColor = .orange
+        label.position = CGPoint(x: 0, y: 40)
+        label.zPosition = 100
+        label.alpha = 0
+        hudNode.addChild(label)
+        
+        let fadeIn = SKAction.fadeIn(withDuration: 0.2)
+        let wait = SKAction.wait(forDuration: 1.0)
+        let fadeOut = SKAction.fadeOut(withDuration: 0.25)
+        let remove = SKAction.removeFromParent()
+        
+        label.run(SKAction.sequence([fadeIn, wait, fadeOut, remove]))
     }
 
     private func spawnGeometricExplosion(at position: CGPoint, color: SKColor, shapeType: String) {
@@ -874,7 +909,14 @@ class GameScene: SKScene {
         guard !runCompleted else { return }
 
         if let active = activeCombatZoneId, isCombatClearInActiveZone() {
-            onCombatZoneCleared(active)
+            if currentCombatWave < totalCombatWaves {
+                currentCombatWave += 1
+                showWaveBanner(wave: currentCombatWave, total: totalCombatWaves)
+                spawnCombat(in: active)
+                updateHUD()
+            } else {
+                onCombatZoneCleared(active)
+            }
         }
 
         if bossSpawnedThisFloor, isBossDead() {
